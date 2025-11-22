@@ -1,0 +1,46 @@
+# Sovereign AI Supply Chain Security Configuration
+# Per Iron Lotus Framework Section 11.2
+
+[advisories]
+# Deny crates with security vulnerabilities
+vulnerability = "deny"
+unmaintained = "warn"
+unsound = "deny"
+yanked = "deny"
+
+[licenses]
+# Only allow approved open-source licenses (no copyleft in sovereign stack)
+unlicensed = "deny"
+copyleft = "deny"
+
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+]
+
+# Warn on licenses we need to review
+confidence-threshold = 0.8
+
+[bans]
+# Multiple versions of same crate increase attack surface
+multiple-versions = "warn"
+wildcards = "deny"
+
+# Deny known problematic crates
+deny = [
+    # No C/C++ FFI (Sovereign AI principle)
+    # { name = "cc", reason = "Compiles C/C++ code, violates zero-C requirement" },
+]
+
+[sources]
+# Only allow crates from crates.io (no git dependencies with ambiguous provenance)
+unknown-registry = "deny"
+unknown-git = "deny"
+
+# Allow crates.io
+[sources.allow-org]
+github = []
