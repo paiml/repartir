@@ -445,10 +445,11 @@ mod tests {
         let encoded = bincode::serialize(&message).unwrap();
         let decoded: RemoteMessage = bincode::deserialize(&encoded).unwrap();
 
-        if let RemoteMessage::SubmitTask(decoded_task) = decoded {
-            assert_eq!(decoded_task.id(), task.id());
-        } else {
-            panic!("Unexpected message type");
+        match decoded {
+            RemoteMessage::SubmitTask(decoded_task) => {
+                assert_eq!(decoded_task.id(), task.id());
+            }
+            _ => unreachable!("Unexpected message type"),
         }
     }
 

@@ -89,11 +89,11 @@ pub enum Priority {
 pub struct Task {
     /// Unique task identifier.
     id: TaskId,
-    /// Path to the binary to execute.
+    /// Path to the binary to execute (CPU/Remote) or shader file (GPU).
     binary: PathBuf,
-    /// Command-line arguments.
+    /// Command-line arguments (CPU/Remote only).
     args: Vec<String>,
-    /// Environment variables.
+    /// Environment variables (CPU/Remote only).
     env: HashMap<String, String>,
     /// Execution backend.
     backend: Backend,
@@ -101,6 +101,18 @@ pub struct Task {
     priority: Priority,
     /// Optional timeout.
     timeout: Option<Duration>,
+    /// GPU compute shader code (WGSL source as UTF-8 bytes, GPU only).
+    #[cfg(feature = "gpu")]
+    shader_code: Option<Vec<u8>>,
+    /// GPU input buffer data (GPU only).
+    #[cfg(feature = "gpu")]
+    input_buffers: Vec<Vec<u8>>,
+    /// GPU output buffer sizes (GPU only).
+    #[cfg(feature = "gpu")]
+    output_buffer_sizes: Vec<u64>,
+    /// GPU workgroup dimensions (x, y, z) - GPU only.
+    #[cfg(feature = "gpu")]
+    workgroup_size: Option<(u32, u32, u32)>,
 }
 
 impl Task {
@@ -151,6 +163,34 @@ impl Task {
     pub const fn timeout(&self) -> Option<Duration> {
         self.timeout
     }
+
+    /// Returns the GPU shader code (WGSL source as UTF-8 bytes).
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn shader_code(&self) -> Option<&[u8]> {
+        self.shader_code.as_deref()
+    }
+
+    /// Returns the GPU input buffers.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn input_buffers(&self) -> &[Vec<u8>] {
+        &self.input_buffers
+    }
+
+    /// Returns the GPU output buffer sizes.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn output_buffer_sizes(&self) -> &[u64] {
+        &self.output_buffer_sizes
+    }
+
+    /// Returns the GPU workgroup size (x, y, z).
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub const fn workgroup_size(&self) -> Option<(u32, u32, u32)> {
+        self.workgroup_size
+    }
 }
 
 /// Builder for `Task`.
@@ -162,6 +202,14 @@ pub struct TaskBuilder {
     backend: Backend,
     priority: Priority,
     timeout: Option<Duration>,
+    #[cfg(feature = "gpu")]
+    shader_code: Option<Vec<u8>>,
+    #[cfg(feature = "gpu")]
+    input_buffers: Vec<Vec<u8>>,
+    #[cfg(feature = "gpu")]
+    output_buffer_sizes: Vec<u64>,
+    #[cfg(feature = "gpu")]
+    workgroup_size: Option<(u32, u32, u32)>,
 }
 
 impl Default for TaskBuilder {
@@ -173,6 +221,14 @@ impl Default for TaskBuilder {
             backend: Backend::Cpu,
             priority: Priority::default(),
             timeout: None,
+            #[cfg(feature = "gpu")]
+            shader_code: None,
+            #[cfg(feature = "gpu")]
+            input_buffers: Vec::new(),
+            #[cfg(feature = "gpu")]
+            output_buffer_sizes: Vec::new(),
+            #[cfg(feature = "gpu")]
+            workgroup_size: None,
         }
     }
 }
@@ -234,17 +290,105 @@ impl TaskBuilder {
         self
     }
 
+    /// Sets the GPU shader code (WGSL source).
+    ///
+    /// For GPU compute tasks, provide the WGSL shader source code as UTF-8 bytes.
+    /// This is mutually exclusive with binary execution.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use repartir::task::{Task, Backend};
+    /// let shader = r#"
+    ///     @group(0) @binding(0) var<storage, read> input: array<f32>;
+    ///     @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+    ///
+    ///     @compute @workgroup_size(64)
+    ///     fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    ///         output[global_id.x] = input[global_id.x] * 2.0;
+    ///     }
+    /// "#;
+    ///
+    /// let task = Task::builder()
+    ///     .shader_code(shader.as_bytes().to_vec())
+    ///     .backend(Backend::Gpu)
+    ///     .build();
+    /// ```
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn shader_code(mut self, code: Vec<u8>) -> Self {
+        self.shader_code = Some(code);
+        self
+    }
+
+    /// Adds an input buffer for GPU compute.
+    ///
+    /// Input buffers are uploaded to the GPU before shader execution.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn input_buffer(mut self, data: Vec<u8>) -> Self {
+        self.input_buffers.push(data);
+        self
+    }
+
+    /// Sets all input buffers at once for GPU compute.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn input_buffers(mut self, buffers: Vec<Vec<u8>>) -> Self {
+        self.input_buffers = buffers;
+        self
+    }
+
+    /// Adds an output buffer size for GPU compute.
+    ///
+    /// Output buffer sizes (in bytes) must be specified before execution.
+    /// Results will be read back from GPU into buffers of these sizes.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn output_buffer_size(mut self, size: u64) -> Self {
+        self.output_buffer_sizes.push(size);
+        self
+    }
+
+    /// Sets all output buffer sizes at once for GPU compute.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn output_buffer_sizes(mut self, sizes: Vec<u64>) -> Self {
+        self.output_buffer_sizes = sizes;
+        self
+    }
+
+    /// Sets the GPU workgroup dimensions (x, y, z).
+    ///
+    /// This determines how many workgroups are dispatched.
+    /// Default is (1, 1, 1) if not set.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub const fn workgroup_size(mut self, x: u32, y: u32, z: u32) -> Self {
+        self.workgroup_size = Some((x, y, z));
+        self
+    }
+
     /// Builds the task.
     ///
     /// # Errors
     ///
     /// Returns an error if the binary path is not set.
     pub fn build(self) -> Result<Task> {
-        let binary = self
-            .binary
-            .ok_or_else(|| crate::error::RepartirError::InvalidTask {
-                reason: "Binary path not set".to_string(),
-            })?;
+        // For GPU tasks with shader code, binary is optional
+        #[cfg(feature = "gpu")]
+        let binary_required = self.shader_code.is_none();
+        #[cfg(not(feature = "gpu"))]
+        let binary_required = true;
+
+        let binary = if binary_required {
+            self.binary
+                .ok_or_else(|| crate::error::RepartirError::InvalidTask {
+                    reason: "Binary path not set".to_string(),
+                })?
+        } else {
+            self.binary.unwrap_or_else(|| PathBuf::from(""))
+        };
 
         Ok(Task {
             id: TaskId::new(),
@@ -254,6 +398,14 @@ impl TaskBuilder {
             backend: self.backend,
             priority: self.priority,
             timeout: self.timeout,
+            #[cfg(feature = "gpu")]
+            shader_code: self.shader_code,
+            #[cfg(feature = "gpu")]
+            input_buffers: self.input_buffers,
+            #[cfg(feature = "gpu")]
+            output_buffer_sizes: self.output_buffer_sizes,
+            #[cfg(feature = "gpu")]
+            workgroup_size: self.workgroup_size,
         })
     }
 }
@@ -263,18 +415,22 @@ impl TaskBuilder {
 pub struct ExecutionResult {
     /// Task ID that was executed.
     task_id: TaskId,
-    /// Exit code from the process.
+    /// Exit code from the process (0 for success, non-zero for error).
+    /// For GPU tasks, 0 indicates successful execution.
     exit_code: i32,
-    /// Standard output.
+    /// Standard output (CPU/Remote binary execution only).
     stdout: Vec<u8>,
-    /// Standard error.
+    /// Standard error (CPU/Remote binary execution only).
     stderr: Vec<u8>,
     /// Execution duration.
     duration: Duration,
+    /// GPU output buffers (GPU execution only).
+    #[cfg(feature = "gpu")]
+    gpu_output_buffers: Vec<Vec<u8>>,
 }
 
 impl ExecutionResult {
-    /// Creates a new execution result.
+    /// Creates a new execution result for binary tasks.
     #[must_use]
     pub const fn new(
         task_id: TaskId,
@@ -289,6 +445,27 @@ impl ExecutionResult {
             stdout,
             stderr,
             duration,
+            #[cfg(feature = "gpu")]
+            gpu_output_buffers: Vec::new(),
+        }
+    }
+
+    /// Creates a new execution result for GPU compute tasks.
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub const fn new_gpu(
+        task_id: TaskId,
+        exit_code: i32,
+        output_buffers: Vec<Vec<u8>>,
+        duration: Duration,
+    ) -> Self {
+        Self {
+            task_id,
+            exit_code,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+            duration,
+            gpu_output_buffers: output_buffers,
         }
     }
 
@@ -348,6 +525,13 @@ impl ExecutionResult {
         std::str::from_utf8(&self.stderr).map_err(|_| crate::error::RepartirError::InvalidTask {
             reason: "Stderr is not valid UTF-8".to_string(),
         })
+    }
+
+    /// Returns the GPU output buffers (GPU tasks only).
+    #[cfg(feature = "gpu")]
+    #[must_use]
+    pub fn gpu_output_buffers(&self) -> &[Vec<u8>] {
+        &self.gpu_output_buffers
     }
 }
 
@@ -418,7 +602,7 @@ mod tests {
     fn test_task_id_display() {
         let id = TaskId::new();
         let displayed = format!("{id}");
-        assert!(displayed.len() > 0);
+        assert!(!displayed.is_empty());
         assert_eq!(displayed, id.as_uuid().to_string());
     }
 
@@ -483,7 +667,7 @@ mod tests {
             task_id,
             0,
             invalid_utf8.clone(),
-            invalid_utf8.clone(),
+            invalid_utf8,
             Duration::from_secs(1),
         );
 
