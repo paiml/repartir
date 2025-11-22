@@ -84,6 +84,92 @@ cargo run --example v1_1_showcase --features full
 - ✅ Parallel speedup (3.82x with 4 workers)
 - ✅ Fault tolerance (graceful error handling)
 
+### v2.0 Data Integration Features
+
+Repartir v2.0 introduces **Parquet checkpoint storage** and **data-locality aware scheduling** for enterprise-grade distributed computing.
+
+#### Checkpoint with Parquet Storage (v2.0)
+
+Enable persistent checkpointing with Apache Parquet format (5-10x compression vs JSON):
+
+```rust
+use repartir::checkpoint::{CheckpointManager, CheckpointId};
+use repartir::task::TaskState;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    // Create checkpoint manager with Parquet backend
+    let manager = CheckpointManager::new("./checkpoints")?;
+
+    // Save checkpoint (automatically uses Parquet format)
+    let checkpoint_id = CheckpointId::new();
+    let state = TaskState::new(vec![1, 2, 3, 4]);
+    manager.save(checkpoint_id, &state).await?;
+
+    // Restore checkpoint (supports both Parquet and legacy JSON)
+    let restored = manager.restore(checkpoint_id).await?;
+
+    println!("Restored iteration: {}", restored.iteration);
+    Ok(())
+}
+```
+
+**Storage efficiency:**
+- **SNAPPY compression**: 5-10x smaller checkpoint files
+- **Columnar format**: Optimized for analytical queries
+- **Backward compatible**: Reads both `.parquet` and `.json` formats
+
+**Run the example:**
+```bash
+cargo run --example checkpoint_example --features checkpoint
+```
+
+#### Locality-Aware Scheduling (v2.0)
+
+Minimize network transfers by scheduling tasks on workers that already have required data:
+
+```rust
+use repartir::{Pool, task::Task, scheduler::Scheduler};
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let scheduler = Scheduler::with_capacity(100);
+
+    // Track data locations
+    let worker_id = uuid::Uuid::new_v4();
+    scheduler.data_tracker()
+        .track_data("dataset_A", worker_id).await;
+    scheduler.data_tracker()
+        .track_data("dataset_B", worker_id).await;
+
+    // Submit task with affinity (automatically prefers worker_id)
+    let task = Task::builder()
+        .binary("/usr/bin/process")
+        .build()?;
+
+    scheduler.submit_with_affinity(
+        task,
+        &["dataset_A".to_string(), "dataset_B".to_string()]
+    ).await?;
+
+    // Check locality metrics
+    let metrics = scheduler.locality_metrics().await;
+    println!("Locality hit rate: {:.1}%", metrics.hit_rate() * 100.0);
+
+    Ok(())
+}
+```
+
+**Scheduling intelligence:**
+- **Affinity scoring**: `(data_items_present / total_data_items)`
+- **Automatic optimization**: Prefers workers with matching data
+- **Real-time metrics**: Track locality hit rate (0.0 to 1.0)
+
+**Performance benefits:**
+- Reduces network I/O for data-intensive workloads
+- Improves cache utilization
+- Enables efficient batch processing
+
 ## Feature Flags
 
 Repartir supports multiple execution backends via feature flags:
@@ -101,6 +187,12 @@ repartir = { version = "0.1", features = ["remote"] }
 
 # With TLS encryption (v1.1+)
 repartir = { version = "0.1", features = ["remote-tls"] }
+
+# With Parquet checkpointing (v2.0+)
+repartir = { version = "0.1", features = ["checkpoint"] }
+
+# With SIMD tensor operations (v2.0+)
+repartir = { version = "0.1", features = ["tensor"] }
 
 # All features
 repartir = { version = "0.1", features = ["full"] }
@@ -373,11 +465,13 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ bashrs purification (POSIX-compliant shell code)
 - ✅ Advanced messaging patterns (PUB/SUB, PUSH/PULL)
 
-### v2.0: Data Integration
-- [ ] trueno-db integration (distributed state)
-- [ ] Checkpointing to persistent storage
-- [ ] Data-locality aware scheduling
-- [ ] Advanced ML patterns (pipeline/tensor parallelism)
+### v2.0: Data Integration (In Progress)
+- ✅ **Parquet Checkpoint Storage** (Phase 1): SNAPPY compression, 5-10x size reduction
+- ✅ **Data-Locality Tracking** (Phase 1): DataLocationTracker with batch affinity queries
+- ✅ **Affinity-Based Scheduling** (Phase 2): Automatic locality-aware task assignment
+- ✅ **Locality Metrics** (Phase 2): Real-time hit rate tracking (0.0 to 1.0)
+- [ ] trueno-db integration (distributed state) - Phase 3
+- [ ] Advanced ML patterns (pipeline/tensor parallelism) - Phase 4
 
 ### v3.0: Enterprise & Cloud
 - [ ] RDMA support (low-latency networking)
