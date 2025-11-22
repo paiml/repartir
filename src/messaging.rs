@@ -514,7 +514,7 @@ mod tests {
     #[test]
     fn test_message_empty_bytes() {
         let msg = Message::bytes(vec![]);
-        assert_eq!(msg.as_bytes(), &[]);
+        assert_eq!(msg.as_bytes(), &[] as &[u8]);
         // Bytes messages always error when calling as_text()
         assert!(msg.as_text().is_err());
     }
