@@ -269,7 +269,7 @@ mod tests {
     use std::io::Write;
 
     // Test certificate and key (minimal self-signed cert for testing)
-    const TEST_CERT_PEM: &str = r#"-----BEGIN CERTIFICATE-----
+    const TEST_CERT_PEM: &str = r"-----BEGIN CERTIFICATE-----
 MIIBkTCB+wIJAKHHCgVZU0HHMA0GCSqGSIb3DQEBCwUAMBExDzANBgNVBAMMBnRl
 c3RDQTAeFw0yNDAxMDEwMDAwMDBaFw0yNTAxMDEwMDAwMDBaMBExDzANBgNVBAMM
 BnRlc3RDQTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA2dQ7A+PqJqZ5Bnxm
@@ -279,9 +279,9 @@ WGxKpQqFl3mXqH5nGlKpQqECAwEAATANBgkqhkiG9w0BAQsFAAOBgQB1nWBqH3mX
 qH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQq
 Fl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWG
 xKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFg==
------END CERTIFICATE-----"#;
+-----END CERTIFICATE-----";
 
-    const TEST_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
+    const TEST_KEY_PEM: &str = r"-----BEGIN PRIVATE KEY-----
 MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANnUOwPj6iameQZ8
 Zh592adKKi+Jxqh95cSyqeUKvlptSvI/WCqWalhsSqUKhZd5l6h+ZxpSqUKmVhsS
 qUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUK
@@ -296,7 +296,7 @@ KhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQJANpUOwPj6iameQZ8Zh5
 92adKKi+Jxqh+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSq
 UKmVhsQJBANpUOwPj6iameQZ8Zh592adKKi+Jxqh+ZxpSqUKmVhsSqUKhZd5l6h+
 ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
------END PRIVATE KEY-----"#;
+-----END PRIVATE KEY-----";
 
     fn create_temp_file(content: &str) -> std::path::PathBuf {
         let mut temp_file = std::env::temp_dir();
@@ -431,8 +431,9 @@ ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
     #[test]
     fn test_tls_config_clone() {
         let config = TlsConfig::builder().build().unwrap();
-        let _cloned = config.clone();
-        // Compilation is the test
+        let cloned = config.clone();
+        // Use both values to satisfy clippy
+        let _ = (config, cloned);
     }
 
     #[test]

@@ -40,7 +40,7 @@ async fn test_scheduler_cpu_executor_workflow() {
         for i in 0..5 {
             let task = Task::builder()
                 .binary("/bin/echo")
-                .arg(format!("task_{}", i))
+                .arg(format!("task_{i}"))
                 .backend(Backend::Cpu)
                 .build()
                 .unwrap();
@@ -161,7 +161,7 @@ async fn test_concurrent_task_execution() {
     use std::sync::Arc;
 
     let scheduler = Arc::new(Scheduler::with_capacity(100));
-    let executor = CpuExecutor::new();
+    let _executor = CpuExecutor::new();
 
     #[cfg(unix)]
     {
@@ -170,7 +170,7 @@ async fn test_concurrent_task_execution() {
         for i in 0..10 {
             let task = Task::builder()
                 .binary("/bin/echo")
-                .arg(format!("concurrent_{}", i))
+                .arg(format!("concurrent_{i}"))
                 .backend(Backend::Cpu)
                 .build()
                 .unwrap();
@@ -212,7 +212,7 @@ async fn test_scheduler_clear_integration() {
         for i in 0..5 {
             let task = Task::builder()
                 .binary("/bin/echo")
-                .arg(format!("task_{}", i))
+                .arg(format!("task_{i}"))
                 .backend(Backend::Cpu)
                 .build()
                 .unwrap();
