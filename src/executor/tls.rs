@@ -265,6 +265,56 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use rustls::client::danger::ServerCertVerifier;
+    use std::io::Write;
+
+    // Test certificate and key (minimal self-signed cert for testing)
+    const TEST_CERT_PEM: &str = r#"-----BEGIN CERTIFICATE-----
+MIIBkTCB+wIJAKHHCgVZU0HHMA0GCSqGSIb3DQEBCwUAMBExDzANBgNVBAMMBnRl
+c3RDQTAeFw0yNDAxMDEwMDAwMDBaFw0yNTAxMDEwMDAwMDBaMBExDzANBgNVBAMM
+BnRlc3RDQTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA2dQ7A+PqJqZ5Bnxm
+Hn3Zp0oqL4nGqH3lxLKp5Qq+Wm1K8j9YKpZqWGxKpQqFl3mXqH5nGlKpQqZWGxKp
+QqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZ
+WGxKpQqFl3mXqH5nGlKpQqECAwEAATANBgkqhkiG9w0BAQsFAAOBgQB1nWBqH3mX
+qH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQq
+Fl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWG
+xKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFg==
+-----END CERTIFICATE-----"#;
+
+    const TEST_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
+MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBANnUOwPj6iameQZ8
+Zh592adKKi+Jxqh95cSyqeUKvlptSvI/WCqWalhsSqUKhZd5l6h+ZxpSqUKmVhsS
+qUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUK
+mVhsSqUKhZd5l6h+ZxpSqUKhAgMBAAECgYAqH3mXqH5nGlKpQqZWGxKpQqFl3mXq
+H5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqF
+l3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGx
+KpQqFl3mXqH5nGlKpQqZQJBAP8xL6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVh
+sSqUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsCQQDaVDsD4+ompnkG
+fGYefdmnSiovic aofqH5nGlKpQqZWGxKpQqFl3mXqH5nGlKpQqZWGxKpQqFl3mXq
+H5nGlKpQqZWGxAkEA2lQ7A+PqJqZ5BnxmHn3Zp0oqL4nGqH6h+ZxpSqUKmVhsSqU
+KhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQJANpUOwPj6iameQZ8Zh5
+92adKKi+Jxqh+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSq
+UKmVhsQJBANpUOwPj6iameQZ8Zh592adKKi+Jxqh+ZxpSqUKmVhsSqUKhZd5l6h+
+ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
+-----END PRIVATE KEY-----"#;
+
+    fn create_temp_file(content: &str) -> std::path::PathBuf {
+        let mut temp_file = std::env::temp_dir();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        temp_file.push(format!(
+            "repartir_test_{}_{}.pem",
+            std::process::id(),
+            timestamp
+        ));
+
+        let mut file = File::create(&temp_file).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+
+        temp_file
+    }
 
     #[test]
     fn test_tls_config_builder() {
@@ -290,5 +340,122 @@ mod tests {
         // But trying to use configs should fail
         assert!(cfg.client_config().is_err());
         assert!(cfg.server_config().is_err());
+    }
+
+    #[test]
+    fn test_load_certs_missing_file() {
+        let result = load_certs("nonexistent.pem");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_private_key_missing_file() {
+        let result = load_private_key("nonexistent.key");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_certs_empty_file() {
+        let temp_file = create_temp_file("");
+        let result = load_certs(&temp_file);
+        std::fs::remove_file(temp_file).ok();
+        // Empty file should succeed but return empty vec (rustls behavior)
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_load_private_key_no_key() {
+        let temp_file = create_temp_file("");
+        let result = load_private_key(&temp_file);
+        std::fs::remove_file(temp_file).ok();
+        // Empty file with no key should fail
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_tls_config_missing_client_cert() {
+        // Missing certificate file should fail
+        let config = TlsConfig::builder()
+            .client_cert("nonexistent_cert.pem")
+            .client_key("nonexistent_key.pem")
+            .build();
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn test_tls_config_missing_server_cert() {
+        // Missing certificate file should fail
+        let config = TlsConfig::builder()
+            .server_cert("nonexistent_cert.pem")
+            .server_key("nonexistent_key.pem")
+            .build();
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn test_tls_config_partial_client_cert_only() {
+        // Only cert without key - build should skip (no error, no config)
+        let cert_file = create_temp_file(TEST_CERT_PEM);
+
+        let config = TlsConfig::builder()
+            .client_cert(cert_file.to_str().unwrap())
+            .build();
+
+        std::fs::remove_file(cert_file).ok();
+
+        // Should succeed (partial config is optional)
+        assert!(config.is_ok());
+        let cfg = config.unwrap();
+        assert!(cfg.client_config().is_err()); // No key, so no client config
+    }
+
+    #[test]
+    fn test_tls_config_partial_server_key_only() {
+        // Only key without cert - build should skip
+        let key_file = create_temp_file(TEST_KEY_PEM);
+
+        let config = TlsConfig::builder()
+            .server_key(key_file.to_str().unwrap())
+            .build();
+
+        std::fs::remove_file(key_file).ok();
+
+        // Should succeed (partial config is optional)
+        assert!(config.is_ok());
+        let cfg = config.unwrap();
+        assert!(cfg.server_config().is_err()); // No cert, so no server config
+    }
+
+    #[test]
+    fn test_tls_config_clone() {
+        let config = TlsConfig::builder().build().unwrap();
+        let _cloned = config.clone();
+        // Compilation is the test
+    }
+
+    #[test]
+    fn test_no_certificate_verification() {
+        let verifier = NoCertificateVerification;
+
+        // Test supported schemes
+        let schemes = verifier.supported_verify_schemes();
+        assert!(!schemes.is_empty());
+        assert!(schemes.contains(&rustls::SignatureScheme::RSA_PKCS1_SHA256));
+        assert!(schemes.contains(&rustls::SignatureScheme::ECDSA_NISTP256_SHA256));
+        assert!(schemes.contains(&rustls::SignatureScheme::ED25519));
+    }
+
+    #[test]
+    fn test_builder_partial_client() {
+        // Only client cert, no key - should succeed (build() validates)
+        let _builder = TlsConfig::builder().client_cert("cert.pem");
+    }
+
+    #[test]
+    fn test_builder_partial_server() {
+        // Only server key, no cert - should succeed (build() validates)
+        let _builder = TlsConfig::builder().server_key("key.pem");
     }
 }

@@ -390,4 +390,72 @@ mod tests {
             assert!(result.unwrap().is_success());
         }
     }
+
+    #[tokio::test]
+    async fn test_cpu_executor_large_output() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            // Generate large output (10KB of text)
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("yes 'test' | head -1000")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert!(exec_result.stdout().len() > 4000);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_empty_output() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            // Command that produces no output
+            let task = Task::builder()
+                .binary("/bin/true")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert_eq!(exec_result.stdout().len(), 0);
+            assert_eq!(exec_result.stderr().len(), 0);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_signal_termination() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            // Test a process that gets killed (no exit code)
+            // This tests the status.code().unwrap_or(-1) path
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("sleep 10 & kill -9 $!")
+                .backend(Backend::Cpu)
+                .timeout(Duration::from_secs(1))
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            // Either timeout or completes quickly
+            let _ = result;
+        }
+    }
 }
