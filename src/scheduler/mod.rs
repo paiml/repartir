@@ -2,6 +2,8 @@
 //!
 //! Implements work-stealing scheduler based on Blumofe & Leiserson (1999).
 
+pub mod locality;
+
 use crate::error::{RepartirError, Result};
 use crate::task::{ExecutionResult, Task, TaskId};
 use std::collections::{BinaryHeap, HashMap};
