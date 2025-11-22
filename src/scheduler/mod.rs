@@ -244,6 +244,59 @@ impl Scheduler {
         Ok((task_id, preferred_worker))
     }
 
+    /// Submit a task with data locality hints (v2.0).
+    ///
+    /// This is a convenience method that calculates affinity from data keys.
+    /// For more control, use `submit_with_affinity` with pre-calculated scores.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - The task to submit
+    /// * `data_keys` - Data dependencies that the task requires
+    ///
+    /// # Returns
+    ///
+    /// Returns the task ID and the preferred worker (if any) based on data locality.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the queue is full.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use repartir::scheduler::{Scheduler, WorkerId};
+    /// # use repartir::task::{Task, Backend};
+    /// # #[tokio::main]
+    /// # async fn main() -> repartir::error::Result<()> {
+    /// let scheduler = Scheduler::with_capacity(100);
+    ///
+    /// // Track data location
+    /// let worker_id = WorkerId::new();
+    /// scheduler.data_tracker()
+    ///     .track_data("dataset_A", worker_id).await;
+    ///
+    /// // Submit task with data keys (affinity calculated automatically)
+    /// let task = Task::builder()
+    ///     .binary("/usr/bin/process")
+    ///     .backend(Backend::Cpu)
+    ///     .build()?;
+    ///
+    /// let (task_id, preferred) = scheduler
+    ///     .submit_with_data_locality(task, &["dataset_A".to_string()])
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn submit_with_data_locality(
+        &self,
+        task: Task,
+        data_keys: &[String],
+    ) -> Result<(TaskId, Option<WorkerId>)> {
+        let affinity = self.calculate_affinity(data_keys).await;
+        self.submit_with_affinity(task, affinity).await
+    }
+
     /// Retrieves the next task from the queue.
     ///
     /// Returns `None` if the queue is empty.
