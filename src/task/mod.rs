@@ -407,4 +407,125 @@ mod tests {
         assert_eq!(result.exit_code(), 0);
         assert_eq!(result.stdout_str().unwrap(), "output");
     }
+
+    #[test]
+    fn test_task_id_default() {
+        let id = TaskId::default();
+        assert!(id.as_uuid().get_version_num() == 4);
+    }
+
+    #[test]
+    fn test_task_id_display() {
+        let id = TaskId::new();
+        let displayed = format!("{id}");
+        assert!(displayed.len() > 0);
+        assert_eq!(displayed, id.as_uuid().to_string());
+    }
+
+    #[test]
+    fn test_task_id_as_uuid() {
+        let id = TaskId::new();
+        let uuid = id.as_uuid();
+        assert!(uuid.get_version_num() == 4);
+    }
+
+    #[test]
+    fn test_task_builder_full() {
+        let mut env = HashMap::new();
+        env.insert("KEY1".to_string(), "VALUE1".to_string());
+
+        let result = Task::builder()
+            .binary("/bin/test")
+            .args(vec!["arg1".to_string(), "arg2".to_string()])
+            .env(env.clone())
+            .env_var("KEY2", "VALUE2")
+            .backend(Backend::Cpu)
+            .priority(Priority::Low)
+            .timeout(Duration::from_secs(10))
+            .build();
+
+        assert!(result.is_ok());
+        let task = result.unwrap();
+        assert_eq!(task.binary().to_str().unwrap(), "/bin/test");
+        assert_eq!(task.args(), &["arg1", "arg2"]);
+        assert_eq!(task.env().get("KEY1").unwrap(), "VALUE1");
+        assert_eq!(task.env().get("KEY2").unwrap(), "VALUE2");
+        assert_eq!(task.backend(), Backend::Cpu);
+        assert_eq!(task.priority(), Priority::Low);
+        assert_eq!(task.timeout(), Some(Duration::from_secs(10)));
+    }
+
+    #[test]
+    fn test_execution_result_failure() {
+        let task_id = TaskId::new();
+        let result = ExecutionResult::new(
+            task_id,
+            1,
+            b"".to_vec(),
+            b"error message".to_vec(),
+            Duration::from_millis(500),
+        );
+
+        assert!(!result.is_success());
+        assert_eq!(result.exit_code(), 1);
+        assert_eq!(result.task_id(), task_id);
+        assert_eq!(result.stdout(), b"");
+        assert_eq!(result.stderr(), b"error message");
+        assert_eq!(result.stderr_str().unwrap(), "error message");
+        assert_eq!(result.duration(), Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_execution_result_invalid_utf8() {
+        let task_id = TaskId::new();
+        let invalid_utf8 = vec![0xFF, 0xFE, 0xFD];
+        let result = ExecutionResult::new(
+            task_id,
+            0,
+            invalid_utf8.clone(),
+            invalid_utf8.clone(),
+            Duration::from_secs(1),
+        );
+
+        assert!(result.stdout_str().is_err());
+        assert!(result.stderr_str().is_err());
+    }
+
+    #[test]
+    fn test_priority_default() {
+        let priority = Priority::default();
+        assert_eq!(priority, Priority::Normal);
+    }
+
+    #[test]
+    fn test_backend_cpu() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .backend(Backend::Cpu)
+            .build()
+            .unwrap();
+        assert_eq!(task.backend(), Backend::Cpu);
+    }
+
+    #[cfg(feature = "gpu")]
+    #[test]
+    fn test_backend_gpu() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .backend(Backend::Gpu)
+            .build()
+            .unwrap();
+        assert_eq!(task.backend(), Backend::Gpu);
+    }
+
+    #[cfg(feature = "remote")]
+    #[test]
+    fn test_backend_remote() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .backend(Backend::Remote)
+            .build()
+            .unwrap();
+        assert_eq!(task.backend(), Backend::Remote);
+    }
 }

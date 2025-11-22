@@ -310,4 +310,64 @@ mod tests {
         scheduler.clear().await;
         assert_eq!(scheduler.pending_count().await, 0);
     }
+
+    #[test]
+    fn test_worker_id_creation() {
+        let id1 = WorkerId::new();
+        let id2 = WorkerId::new();
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_worker_id_default() {
+        let id = WorkerId::default();
+        let id2 = WorkerId::new();
+        assert_ne!(id, id2);
+    }
+
+    #[test]
+    fn test_scheduler_default() {
+        let scheduler = Scheduler::default();
+        let scheduler2 = Scheduler::new();
+        // Both should have same behavior
+        assert_eq!(scheduler.max_queue_size, scheduler2.max_queue_size);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_empty_queue() {
+        let scheduler = Scheduler::new();
+        let task = scheduler.next_task().await;
+        assert!(task.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_nonexistent_result() {
+        let scheduler = Scheduler::new();
+        let fake_id = TaskId::new();
+
+        let result = scheduler.get_result(fake_id).await;
+        assert!(result.is_none());
+
+        let removed = scheduler.remove_result(fake_id).await;
+        assert!(removed.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_clear_with_results() {
+        let scheduler = Scheduler::new();
+
+        let task_id = TaskId::new();
+        let result = ExecutionResult::new(
+            task_id,
+            0,
+            b"output".to_vec(),
+            b"".to_vec(),
+            Duration::from_secs(1),
+        );
+
+        scheduler.store_result(result).await;
+        scheduler.clear().await;
+
+        assert!(scheduler.get_result(task_id).await.is_none());
+    }
 }
