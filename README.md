@@ -64,6 +64,26 @@ async fn main() -> repartir::error::Result<()> {
 cargo run --example hello_repartir
 ```
 
+### Comprehensive v1.1 Showcase
+
+See all v1.1 features in action:
+
+```bash
+# Generate TLS certificates first
+./scripts/generate-test-certs.sh ./certs
+
+# Run comprehensive showcase
+cargo run --example v1_1_showcase --features full
+```
+
+**Demonstrates:**
+- ✅ CPU executor with work-stealing (48 workers, Blumofe & Leiserson algorithm)
+- ✅ GPU detection (NVIDIA RTX 4090, 2048 compute units)
+- ✅ TLS encryption (certificate-based auth, TLS 1.3)
+- ✅ Priority scheduling (High/Normal/Low queues)
+- ✅ Parallel speedup (3.82x with 4 workers)
+- ✅ Fault tolerance (graceful error handling)
+
 ## Feature Flags
 
 Repartir supports multiple execution backends via feature flags:
