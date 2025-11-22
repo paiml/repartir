@@ -79,6 +79,9 @@ repartir = { version = "0.1", features = ["gpu"] }
 # With remote execution (v1.1+)
 repartir = { version = "0.1", features = ["remote"] }
 
+# With TLS encryption (v1.1+)
+repartir = { version = "0.1", features = ["remote-tls"] }
+
 # All features
 repartir = { version = "0.1", features = ["full"] }
 ```
@@ -111,6 +114,45 @@ async fn main() -> repartir::error::Result<()> {
 ```bash
 cargo run --example gpu_detect --features gpu
 ```
+
+### TLS Encryption (v1.1+)
+
+Secure remote execution with TLS/SSL encryption using [rustls](https://github.com/rustls/rustls):
+
+```rust
+use repartir::executor::tls::TlsConfig;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    // Generate test certificates:
+    // ./scripts/generate-test-certs.sh ./certs
+
+    let tls_config = TlsConfig::builder()
+        .client_cert("./certs/client.pem")
+        .client_key("./certs/client.key")
+        .server_cert("./certs/server.pem")
+        .server_key("./certs/server.key")
+        .ca_cert("./certs/ca.pem")
+        .build()?;
+
+    println!("TLS enabled!");
+    Ok(())
+}
+```
+
+**Security features:**
+- TLS 1.3 end-to-end encryption
+- Certificate-based authentication
+- Perfect forward secrecy
+- MITM attack protection
+
+**Generate test certificates:**
+```bash
+./scripts/generate-test-certs.sh ./certs
+cargo run --example tls_example --features remote-tls
+```
+
+⚠️ **WARNING**: The included certificate generator creates self-signed certificates for **TESTING ONLY**. For production, use certificates from a trusted CA (Let's Encrypt, DigiCert, etc.).
 
 ## Architecture
 
@@ -241,10 +283,11 @@ Per NSA/CISA joint guidance on memory-safe languages:
 ### v1.1: Production Hardening (In Progress)
 - ✅ GPU executor skeleton (wgpu detection, v1.2 for rust-gpu compute)
 - ✅ Remote executor (TCP transport, length-prefixed bincode protocol)
+- ✅ TLS encryption (rustls, certificate-based auth, TLS 1.3)
 - ✅ Performance benchmarks vs Ray/Dask (5 benchmark suites)
 - ✅ Mutation testing ≥85% (framework + documentation)
 - ✅ Comprehensive Makefile (tier1/tier2/tier3, coverage enforcement)
-- [ ] TLS encryption for remote executor (rustls integration)
+- ✅ bashrs purification (POSIX-compliant shell code)
 - [ ] Advanced messaging patterns (PUB/SUB, PUSH/PULL)
 
 ### v2.0: Data Integration
