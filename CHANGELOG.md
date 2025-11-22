@@ -20,16 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `read_parquet()` method for checkpoint restoration
   - Automatic format detection in `restore()` and `list_checkpoints()`
   - Cleanup method handles both Parquet and JSON checkpoint files
+- **Data-Locality Tracking** (Phase 1 foundation):
+  - New `DataLocationTracker` component in scheduler module
+  - Tracks which data items (by string key) are present on which workers
+  - Methods: `track_data()`, `locate_data()`, `locate_data_batch()`, `remove_data()`, `remove_worker()`
+  - Batch queries return worker affinity scores (count of matching data items)
+  - Foundation for Phase 2 locality-aware scheduling
+  - 9 comprehensive tests covering all tracker operations
 
 ### Changed
 - Checkpoint feature now includes `arrow` and `parquet` dependencies
 - CheckpointManager writes Parquet format by default when `checkpoint` feature is enabled
 - Improved checkpoint storage efficiency with columnar format and compression
+- Scheduler module now includes HashSet for data location tracking
 
 ### Technical Details
 - Parquet schema uses timestamp microseconds for precise temporal ordering
 - Single-row record batches per checkpoint for optimal small-file performance
 - Backward compatibility maintained: existing JSON checkpoints continue to work
+- DataLocationTracker uses Arc<RwLock<HashMap>> for thread-safe concurrent access
+- Worker IDs use UUIDs (per Iron Lotus Framework) to prevent invalidation on disconnects
 
 ## [1.0.0] - 2025-11-22
 
