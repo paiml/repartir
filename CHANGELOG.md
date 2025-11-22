@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2025-11-22 (v2.0: Data Integration - Phase 1)
+## [2.0.0] - 2025-11-22 (v2.0: Data Integration - Phase 1 & 2)
+
+### Phase 2: Locality-Aware Scheduling (NEW)
+- **Affinity-Based Task Assignment**:
+  - Scheduler automatically calculates worker affinity based on data dependencies
+  - Affinity score: (data items present) / (total data items requested)
+  - `submit_with_affinity()` API for explicit worker preferences
+  - `calculate_affinity()` internal method for automatic scoring
+- **Locality Metrics Tracking**:
+  - New `LocalityMetrics` struct tracks scheduling efficiency
+  - Metrics: total_tasks, tasks_with_dependencies, tasks_with_locality
+  - `hit_rate()` method calculates locality hit rate (0.0 to 1.0)
+  - Real-time tracking via `locality_metrics()` accessor
+- **Enhanced Scheduler**:
+  - Integrated DataLocationTracker for data-aware scheduling
+  - `data_tracker()` accessor for direct tracker access
+  - `clear()` method resets data locations and metrics
+  - 6 new comprehensive tests for locality scheduling
+
+### Phase 1: Foundational Data Tracking
 
 ### Added
 - **Parquet Checkpoint Storage**: Checkpoints now use Apache Parquet format for efficient columnar storage

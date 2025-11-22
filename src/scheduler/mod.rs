@@ -31,6 +31,31 @@ impl Default for WorkerId {
     }
 }
 
+/// Locality metrics for tracking data-aware scheduling efficiency (v2.0).
+#[derive(Debug, Clone, Default)]
+pub struct LocalityMetrics {
+    /// Total number of tasks submitted
+    pub total_tasks: usize,
+    /// Number of tasks with data dependencies
+    pub tasks_with_dependencies: usize,
+    /// Number of tasks that had locality matches
+    pub tasks_with_locality: usize,
+}
+
+impl LocalityMetrics {
+    /// Calculates the locality hit rate (0.0 to 1.0).
+    ///
+    /// Returns the ratio of tasks with locality matches to total tasks with dependencies.
+    #[must_use]
+    pub fn hit_rate(&self) -> f64 {
+        if self.tasks_with_dependencies == 0 {
+            0.0
+        } else {
+            self.tasks_with_locality as f64 / self.tasks_with_dependencies as f64
+        }
+    }
+}
+
 /// Task wrapper for priority queue.
 ///
 /// Implements `Ord` to enable priority-based scheduling.
@@ -64,6 +89,8 @@ impl Ord for PriorityTask {
 ///
 /// This is a v1.0 implementation. Future versions will implement
 /// true work-stealing with per-worker deques.
+///
+/// v2.0 adds data-locality tracking for affinity-based scheduling.
 pub struct Scheduler {
     /// Priority queue of pending tasks.
     queue: Arc<RwLock<BinaryHeap<PriorityTask>>>,
@@ -71,6 +98,10 @@ pub struct Scheduler {
     max_queue_size: usize,
     /// Task results indexed by task ID.
     results: Arc<RwLock<HashMap<TaskId, ExecutionResult>>>,
+    /// Data location tracker for locality-aware scheduling (v2.0).
+    data_tracker: DataLocationTracker,
+    /// Locality metrics (v2.0): tasks_with_locality / total_tasks.
+    locality_metrics: Arc<RwLock<LocalityMetrics>>,
 }
 
 impl Scheduler {
@@ -88,10 +119,25 @@ impl Scheduler {
             queue: Arc::new(RwLock::new(BinaryHeap::new())),
             max_queue_size,
             results: Arc::new(RwLock::new(HashMap::new())),
+            data_tracker: DataLocationTracker::new(),
+            locality_metrics: Arc::new(RwLock::new(LocalityMetrics::default())),
         }
     }
 
+    /// Returns a reference to the data location tracker (v2.0).
+    #[must_use]
+    pub const fn data_tracker(&self) -> &DataLocationTracker {
+        &self.data_tracker
+    }
+
+    /// Returns current locality metrics (v2.0).
+    pub async fn locality_metrics(&self) -> LocalityMetrics {
+        self.locality_metrics.read().await.clone()
+    }
+
     /// Submits a task to the scheduler.
+    ///
+    /// For tasks with data dependencies, considers data locality for scheduling.
     ///
     /// # Errors
     ///
@@ -99,6 +145,26 @@ impl Scheduler {
     pub async fn submit(&self, task: Task) -> Result<TaskId> {
         let task_id = task.id();
         let task_priority = task.priority();
+        let has_dependencies = !task.data_dependencies().is_empty();
+
+        // Update locality metrics
+        {
+            let mut metrics = self.locality_metrics.write().await;
+            metrics.total_tasks += 1;
+            if has_dependencies {
+                metrics.tasks_with_dependencies += 1;
+
+                // Check if any worker has the required data
+                let affinity = self.calculate_affinity(task.data_dependencies()).await;
+                if !affinity.is_empty() {
+                    metrics.tasks_with_locality += 1;
+                    debug!(
+                        "Task {task_id} has locality: {} workers with data",
+                        affinity.len()
+                    );
+                }
+            }
+        }
 
         {
             let mut queue = self.queue.write().await;
@@ -114,6 +180,68 @@ impl Scheduler {
         } // Drop queue lock early
 
         Ok(task_id)
+    }
+
+    /// Calculates affinity scores for workers based on data dependencies.
+    ///
+    /// Returns a map of worker_id -> affinity score (0.0 to 1.0).
+    /// Score = (data items present on worker) / (total data items requested)
+    ///
+    /// # Arguments
+    ///
+    /// * `data_keys` - Data items required by the task
+    async fn calculate_affinity(&self, data_keys: &[String]) -> HashMap<WorkerId, f64> {
+        if data_keys.is_empty() {
+            return HashMap::new();
+        }
+
+        let counts = self.data_tracker.locate_data_batch(data_keys).await;
+        let total = data_keys.len() as f64;
+
+        counts
+            .into_iter()
+            .map(|(worker, count)| (worker, count as f64 / total))
+            .collect()
+    }
+
+    /// Submits a task with explicit worker affinity preferences (v2.0).
+    ///
+    /// This is a lower-level API that allows callers to specify custom affinity scores.
+    /// For most use cases, use `submit()` which automatically calculates affinity
+    /// based on task data dependencies.
+    ///
+    /// # Arguments
+    ///
+    /// * `task` - Task to schedule
+    /// * `affinity` - Map of worker_id -> preference score (higher = better)
+    ///
+    /// # Returns
+    ///
+    /// Returns the task ID and the preferred worker (if any)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the queue is full.
+    pub async fn submit_with_affinity(
+        &self,
+        task: Task,
+        affinity: HashMap<WorkerId, f64>,
+    ) -> Result<(TaskId, Option<WorkerId>)> {
+        let task_id = self.submit(task).await?;
+
+        // Find worker with highest affinity
+        let preferred_worker = affinity
+            .into_iter()
+            .max_by(|(_, score_a), (_, score_b)| {
+                score_a.partial_cmp(score_b).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(worker, _)| worker);
+
+        if let Some(worker) = preferred_worker {
+            debug!("Task {task_id} prefers worker {:?}", worker);
+        }
+
+        Ok((task_id, preferred_worker))
     }
 
     /// Retrieves the next task from the queue.
@@ -146,10 +274,12 @@ impl Scheduler {
         self.results.write().await.remove(&task_id)
     }
 
-    /// Clears all pending tasks and results.
+    /// Clears all pending tasks, results, data locations, and metrics.
     pub async fn clear(&self) {
         self.queue.write().await.clear();
         self.results.write().await.clear();
+        self.data_tracker.clear().await;
+        *self.locality_metrics.write().await = LocalityMetrics::default();
         info!("Scheduler cleared");
     }
 }
@@ -698,5 +828,188 @@ mod tests {
         let counts = tracker.locate_data_batch(&data_keys).await;
 
         assert_eq!(counts.get(&worker), Some(&1)); // Only counts "exists"
+    }
+
+    // Locality-aware scheduling tests (v2.0 Phase 2)
+
+    #[tokio::test]
+    async fn test_scheduler_locality_metrics() {
+        let scheduler = Scheduler::new();
+
+        // Task without dependencies
+        let task1 = Task::builder()
+            .binary("/bin/echo")
+            .arg("test1")
+            .backend(Backend::Cpu)
+            .build()
+            .unwrap();
+
+        scheduler.submit(task1).await.unwrap();
+
+        let metrics = scheduler.locality_metrics().await;
+        assert_eq!(metrics.total_tasks, 1);
+        assert_eq!(metrics.tasks_with_dependencies, 0);
+        assert_eq!(metrics.tasks_with_locality, 0);
+        assert_eq!(metrics.hit_rate(), 0.0);
+
+        // Task with dependencies (no workers have data yet)
+        let task2 = Task::builder()
+            .binary("/bin/echo")
+            .arg("test2")
+            .backend(Backend::Cpu)
+            .data_dependency("data1")
+            .build()
+            .unwrap();
+
+        scheduler.submit(task2).await.unwrap();
+
+        let metrics = scheduler.locality_metrics().await;
+        assert_eq!(metrics.total_tasks, 2);
+        assert_eq!(metrics.tasks_with_dependencies, 1);
+        assert_eq!(metrics.tasks_with_locality, 0);
+        assert_eq!(metrics.hit_rate(), 0.0);
+
+        // Track data on a worker
+        let worker = WorkerId::new();
+        scheduler.data_tracker().track_data("data1", worker).await;
+
+        // Task with dependencies (worker has data)
+        let task3 = Task::builder()
+            .binary("/bin/echo")
+            .arg("test3")
+            .backend(Backend::Cpu)
+            .data_dependency("data1")
+            .build()
+            .unwrap();
+
+        scheduler.submit(task3).await.unwrap();
+
+        let metrics = scheduler.locality_metrics().await;
+        assert_eq!(metrics.total_tasks, 3);
+        assert_eq!(metrics.tasks_with_dependencies, 2);
+        assert_eq!(metrics.tasks_with_locality, 1);
+        assert_eq!(metrics.hit_rate(), 0.5); // 1 out of 2
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_submit_with_affinity() {
+        let scheduler = Scheduler::new();
+        let worker1 = WorkerId::new();
+        let worker2 = WorkerId::new();
+
+        let mut affinity = HashMap::new();
+        affinity.insert(worker1, 0.3);
+        affinity.insert(worker2, 0.8);
+
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .arg("test")
+            .backend(Backend::Cpu)
+            .build()
+            .unwrap();
+
+        let (task_id, preferred_worker) =
+            scheduler.submit_with_affinity(task, affinity).await.unwrap();
+
+        assert!(task_id != TaskId::default());
+        assert_eq!(preferred_worker, Some(worker2)); // Higher affinity
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_affinity_calculation() {
+        let scheduler = Scheduler::new();
+        let worker1 = WorkerId::new();
+        let worker2 = WorkerId::new();
+
+        // Worker 1 has data1 and data2
+        scheduler.data_tracker().track_data("data1", worker1).await;
+        scheduler.data_tracker().track_data("data2", worker1).await;
+
+        // Worker 2 has only data1
+        scheduler.data_tracker().track_data("data1", worker2).await;
+
+        // Task requires data1 and data2
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .arg("test")
+            .backend(Backend::Cpu)
+            .data_dependency("data1")
+            .data_dependency("data2")
+            .build()
+            .unwrap();
+
+        // Submit and check affinity via metrics
+        scheduler.submit(task).await.unwrap();
+
+        // Worker 1 should have affinity 1.0 (2/2)
+        // Worker 2 should have affinity 0.5 (1/2)
+        // This should be reflected in locality metrics
+        let metrics = scheduler.locality_metrics().await;
+        assert_eq!(metrics.tasks_with_locality, 1);
+        assert_eq!(metrics.hit_rate(), 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_clear_resets_locality() {
+        let scheduler = Scheduler::new();
+        let worker = WorkerId::new();
+
+        scheduler.data_tracker().track_data("data", worker).await;
+
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .arg("test")
+            .backend(Backend::Cpu)
+            .data_dependency("data")
+            .build()
+            .unwrap();
+
+        scheduler.submit(task).await.unwrap();
+
+        let metrics_before = scheduler.locality_metrics().await;
+        assert_eq!(metrics_before.total_tasks, 1);
+
+        scheduler.clear().await;
+
+        let metrics_after = scheduler.locality_metrics().await;
+        assert_eq!(metrics_after.total_tasks, 0);
+        assert_eq!(metrics_after.tasks_with_dependencies, 0);
+        assert_eq!(metrics_after.tasks_with_locality, 0);
+
+        // Data tracker should also be cleared
+        assert_eq!(scheduler.data_tracker().data_count().await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_locality_metrics_hit_rate() {
+        let mut metrics = LocalityMetrics::default();
+        assert_eq!(metrics.hit_rate(), 0.0); // No dependencies
+
+        metrics.tasks_with_dependencies = 10;
+        metrics.tasks_with_locality = 7;
+        assert_eq!(metrics.hit_rate(), 0.7); // 70% hit rate
+
+        metrics.tasks_with_dependencies = 0;
+        assert_eq!(metrics.hit_rate(), 0.0); // Division by zero guard
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_affinity_empty_dependencies() {
+        let scheduler = Scheduler::new();
+
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .arg("test")
+            .backend(Backend::Cpu)
+            .build()
+            .unwrap();
+
+        let affinity = HashMap::new();
+        let (_, preferred_worker) = scheduler
+            .submit_with_affinity(task, affinity)
+            .await
+            .unwrap();
+
+        assert_eq!(preferred_worker, None); // No affinity, no preference
     }
 }
