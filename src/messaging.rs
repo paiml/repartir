@@ -452,4 +452,79 @@ mod tests {
         let msg = channel.pull().await.unwrap();
         assert_eq!(msg.as_text().unwrap(), "Test");
     }
+
+    #[tokio::test]
+    async fn test_pubsub_default() {
+        let channel = PubSubChannel::default();
+        let mut sub = channel.subscribe("test").await;
+
+        channel
+            .publish("test", Message::text("Default channel"))
+            .await
+            .unwrap();
+
+        let msg = sub.recv().await.unwrap();
+        assert_eq!(msg.as_text().unwrap(), "Default channel");
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_no_subscribers() {
+        let channel = PubSubChannel::new();
+
+        // Publishing to a non-existent topic should error
+        let result = channel.publish("empty_topic", Message::text("Nobody listening")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_subscriber_count() {
+        let channel = PubSubChannel::new();
+
+        assert_eq!(channel.subscriber_count("nonexistent").await, 0);
+
+        let _sub1 = channel.subscribe("topic1").await;
+        assert_eq!(channel.subscriber_count("topic1").await, 1);
+
+        let _sub2 = channel.subscribe("topic1").await;
+        assert_eq!(channel.subscriber_count("topic1").await, 2);
+    }
+
+    #[tokio::test]
+    async fn test_pubsub_topic_count() {
+        let channel = PubSubChannel::new();
+
+        assert_eq!(channel.topic_count().await, 0);
+
+        let _sub1 = channel.subscribe("topic1").await;
+        assert_eq!(channel.topic_count().await, 1);
+
+        let _sub2 = channel.subscribe("topic2").await;
+        assert_eq!(channel.topic_count().await, 2);
+    }
+
+    #[test]
+    fn test_message_empty_text() {
+        let msg = Message::text("");
+        assert_eq!(msg.as_text().unwrap(), "");
+        assert_eq!(msg.as_bytes(), b"");
+    }
+
+    #[test]
+    fn test_message_empty_bytes() {
+        let msg = Message::bytes(vec![]);
+        assert_eq!(msg.as_bytes(), &[]);
+        // Bytes messages always error when calling as_text()
+        assert!(msg.as_text().is_err());
+    }
+
+    #[tokio::test]
+    async fn test_pushpull_empty_channel() {
+        use tokio::time::{timeout, Duration};
+
+        let channel = PushPullChannel::new(10);
+
+        // Try to pull from empty channel with timeout
+        let result = timeout(Duration::from_millis(10), channel.pull()).await;
+        assert!(result.is_err()); // Should timeout
+    }
 }

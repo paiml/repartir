@@ -270,4 +270,124 @@ mod tests {
         assert_eq!(executor.capacity(), 4);
         assert_eq!(executor.name(), "CPU");
     }
+
+    #[test]
+    fn test_cpu_executor_default() {
+        let executor = CpuExecutor::default();
+        assert!(executor.capacity() > 0);
+        assert_eq!(executor.name(), "CPU");
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_with_env_vars() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("echo $TEST_VAR")
+                .env_var("TEST_VAR", "test_value")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert_eq!(exec_result.stdout_str().unwrap().trim(), "test_value");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_stderr_capture() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("echo error_message >&2")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert_eq!(exec_result.stderr_str().unwrap().trim(), "error_message");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_multiple_args() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            let task = Task::builder()
+                .binary("/bin/echo")
+                .arg("arg1")
+                .arg("arg2")
+                .arg("arg3")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert_eq!(exec_result.stdout_str().unwrap().trim(), "arg1 arg2 arg3");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_stdout_and_stderr() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("echo stdout_message && echo stderr_message >&2")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+
+            let exec_result = result.unwrap();
+            assert!(exec_result.is_success());
+            assert_eq!(exec_result.stdout_str().unwrap().trim(), "stdout_message");
+            assert_eq!(exec_result.stderr_str().unwrap().trim(), "stderr_message");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_cpu_executor_empty_args() {
+        let executor = CpuExecutor::new();
+
+        #[cfg(unix)]
+        {
+            let task = Task::builder()
+                .binary("/bin/pwd")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+            assert!(result.unwrap().is_success());
+        }
+    }
 }
