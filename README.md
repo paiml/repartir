@@ -174,6 +174,69 @@ cargo run --example tls_example --features remote-tls
 
 ⚠️ **WARNING**: The included certificate generator creates self-signed certificates for **TESTING ONLY**. For production, use certificates from a trusted CA (Let's Encrypt, DigiCert, etc.).
 
+### Messaging Patterns (v1.1+)
+
+Advanced messaging for distributed coordination with PUB/SUB and PUSH/PULL patterns:
+
+#### Publish-Subscribe (PUB/SUB)
+
+One publisher broadcasts to multiple subscribers:
+
+```rust
+use repartir::messaging::{PubSubChannel, Message};
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let channel = PubSubChannel::new();
+
+    // Subscribe to topics
+    let mut events = channel.subscribe("events").await;
+    let mut alerts = channel.subscribe("alerts").await;
+
+    // Publish messages
+    channel.publish("events", Message::text("Task completed")).await?;
+
+    // All subscribers receive broadcast
+    if let Some(msg) = events.recv().await {
+        println!("Event: {}", msg.as_text()?);
+    }
+
+    Ok(())
+}
+```
+
+**Use cases**: Event notifications, logging, monitoring, real-time updates
+
+#### Push-Pull (PUSH/PULL)
+
+Work distribution with automatic load balancing:
+
+```rust
+use repartir::messaging::{PushPullChannel, Message};
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let channel = PushPullChannel::new(100);
+
+    // Producers push work
+    channel.push(Message::text("Work item 1")).await?;
+    channel.push(Message::text("Work item 2")).await?;
+
+    // Consumers pull work (load balanced)
+    let work = channel.pull().await;
+
+    Ok(())
+}
+```
+
+**Use cases**: Work queues, job scheduling, pipeline processing, task distribution
+
+**Run examples:**
+```bash
+cargo run --example pubsub_example
+cargo run --example pushpull_example
+```
+
 ## Architecture
 
 Repartir follows a clean, layered architecture:
@@ -300,7 +363,7 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ Iron Lotus quality gates
 - ✅ Supply chain security
 
-### v1.1: Production Hardening (In Progress)
+### v1.1: Production Hardening (Complete)
 - ✅ GPU executor skeleton (wgpu detection, v1.2 for rust-gpu compute)
 - ✅ Remote executor (TCP transport, length-prefixed bincode protocol)
 - ✅ TLS encryption (rustls, certificate-based auth, TLS 1.3)
@@ -308,7 +371,7 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ Mutation testing ≥85% (framework + documentation)
 - ✅ Comprehensive Makefile (tier1/tier2/tier3, coverage enforcement)
 - ✅ bashrs purification (POSIX-compliant shell code)
-- [ ] Advanced messaging patterns (PUB/SUB, PUSH/PULL)
+- ✅ Advanced messaging patterns (PUB/SUB, PUSH/PULL)
 
 ### v2.0: Data Integration
 - [ ] trueno-db integration (distributed state)
