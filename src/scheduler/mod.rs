@@ -4,7 +4,7 @@
 
 use crate::error::{RepartirError, Result};
 use crate::task::{ExecutionResult, Task, TaskId};
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
@@ -155,6 +155,165 @@ impl Scheduler {
 }
 
 impl Default for Scheduler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Data-locality tracker for distributed scheduling (v2.0).
+///
+/// Tracks which data items (identified by string keys) are present on which workers,
+/// enabling locality-aware task scheduling.
+///
+/// # Example
+///
+/// ```
+/// use repartir::scheduler::{DataLocationTracker, WorkerId};
+///
+/// # tokio_test::block_on(async {
+/// let tracker = DataLocationTracker::new();
+/// let worker = WorkerId::new();
+///
+/// // Track that worker has tensor_batch_42
+/// tracker.track_data("tensor_batch_42", worker).await;
+///
+/// // Query which workers have this data
+/// let locations = tracker.locate_data("tensor_batch_42").await;
+/// assert_eq!(locations.len(), 1);
+/// # });
+/// ```
+pub struct DataLocationTracker {
+    /// Maps data keys to the set of workers that have them.
+    /// data_key -> HashSet<WorkerId>
+    locations: Arc<RwLock<HashMap<String, HashSet<WorkerId>>>>,
+}
+
+impl DataLocationTracker {
+    /// Creates a new data location tracker.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            locations: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// Records that a worker has a specific data item.
+    ///
+    /// # Arguments
+    ///
+    /// * `data_key` - Unique identifier for the data item
+    /// * `worker_id` - Worker that has the data
+    pub async fn track_data(&self, data_key: impl Into<String>, worker_id: WorkerId) {
+        let key = data_key.into();
+        let mut locations = self.locations.write().await;
+
+        locations
+            .entry(key.clone())
+            .or_insert_with(HashSet::new)
+            .insert(worker_id);
+
+        debug!("Tracked data '{}' on worker {:?}", key, worker_id);
+    }
+
+    /// Finds all workers that have a specific data item.
+    ///
+    /// # Arguments
+    ///
+    /// * `data_key` - Unique identifier for the data item
+    ///
+    /// # Returns
+    ///
+    /// Vector of worker IDs that have the data (empty if no workers have it)
+    pub async fn locate_data(&self, data_key: &str) -> Vec<WorkerId> {
+        let locations = self.locations.read().await;
+
+        locations
+            .get(data_key)
+            .map(|workers| workers.iter().copied().collect())
+            .unwrap_or_default()
+    }
+
+    /// Finds all workers that have any of the specified data items.
+    ///
+    /// Returns a map of worker_id -> count of data items present on that worker.
+    /// Useful for calculating affinity scores.
+    ///
+    /// # Arguments
+    ///
+    /// * `data_keys` - Slice of data item identifiers
+    ///
+    /// # Returns
+    ///
+    /// HashMap mapping each worker to the number of requested data items it has
+    pub async fn locate_data_batch(&self, data_keys: &[String]) -> HashMap<WorkerId, usize> {
+        let locations = self.locations.read().await;
+        let mut worker_counts: HashMap<WorkerId, usize> = HashMap::new();
+
+        for key in data_keys {
+            if let Some(workers) = locations.get(key) {
+                for worker_id in workers {
+                    *worker_counts.entry(*worker_id).or_insert(0) += 1;
+                }
+            }
+        }
+
+        worker_counts
+    }
+
+    /// Removes a data item from tracking (e.g., when data is deleted).
+    ///
+    /// # Arguments
+    ///
+    /// * `data_key` - Unique identifier for the data item
+    ///
+    /// # Returns
+    ///
+    /// True if the data was tracked and removed, false otherwise
+    pub async fn remove_data(&self, data_key: &str) -> bool {
+        let mut locations = self.locations.write().await;
+        locations.remove(data_key).is_some()
+    }
+
+    /// Removes a worker from all data location records (e.g., when worker disconnects).
+    ///
+    /// # Arguments
+    ///
+    /// * `worker_id` - Worker to remove from all locations
+    ///
+    /// # Returns
+    ///
+    /// Number of data items that were updated
+    pub async fn remove_worker(&self, worker_id: WorkerId) -> usize {
+        let mut locations = self.locations.write().await;
+        let mut removed_count = 0;
+
+        locations.retain(|_, workers| {
+            if workers.remove(&worker_id) {
+                removed_count += 1;
+            }
+            !workers.is_empty() // Remove entries with no workers
+        });
+
+        if removed_count > 0 {
+            info!("Removed worker {:?} from {} data items", worker_id, removed_count);
+        }
+
+        removed_count
+    }
+
+    /// Returns the total number of tracked data items.
+    pub async fn data_count(&self) -> usize {
+        self.locations.read().await.len()
+    }
+
+    /// Clears all data location records.
+    pub async fn clear(&self) {
+        self.locations.write().await.clear();
+        info!("Data location tracker cleared");
+    }
+}
+
+impl Default for DataLocationTracker {
     fn default() -> Self {
         Self::new()
     }
@@ -369,5 +528,175 @@ mod tests {
         scheduler.clear().await;
 
         assert!(scheduler.get_result(task_id).await.is_none());
+    }
+
+    // DataLocationTracker tests (v2.0)
+
+    #[tokio::test]
+    async fn test_data_location_tracker_basic() {
+        let tracker = DataLocationTracker::new();
+        let worker1 = WorkerId::new();
+        let worker2 = WorkerId::new();
+
+        // Track data on workers
+        tracker.track_data("tensor_batch_42", worker1).await;
+        tracker.track_data("tensor_batch_42", worker2).await;
+        tracker.track_data("checkpoint_123", worker1).await;
+
+        // Locate data
+        let locations = tracker.locate_data("tensor_batch_42").await;
+        assert_eq!(locations.len(), 2);
+        assert!(locations.contains(&worker1));
+        assert!(locations.contains(&worker2));
+
+        let checkpoint_locations = tracker.locate_data("checkpoint_123").await;
+        assert_eq!(checkpoint_locations.len(), 1);
+        assert!(checkpoint_locations.contains(&worker1));
+
+        // Non-existent data
+        let empty = tracker.locate_data("nonexistent").await;
+        assert_eq!(empty.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_batch() {
+        let tracker = DataLocationTracker::new();
+        let worker1 = WorkerId::new();
+        let worker2 = WorkerId::new();
+        let worker3 = WorkerId::new();
+
+        // Worker 1 has: batch_1, batch_2, batch_3
+        tracker.track_data("batch_1", worker1).await;
+        tracker.track_data("batch_2", worker1).await;
+        tracker.track_data("batch_3", worker1).await;
+
+        // Worker 2 has: batch_1, batch_2
+        tracker.track_data("batch_1", worker2).await;
+        tracker.track_data("batch_2", worker2).await;
+
+        // Worker 3 has: batch_1
+        tracker.track_data("batch_1", worker3).await;
+
+        // Batch query
+        let data_keys = vec![
+            "batch_1".to_string(),
+            "batch_2".to_string(),
+            "batch_3".to_string(),
+        ];
+
+        let counts = tracker.locate_data_batch(&data_keys).await;
+
+        assert_eq!(counts.get(&worker1), Some(&3)); // Has all 3
+        assert_eq!(counts.get(&worker2), Some(&2)); // Has 2
+        assert_eq!(counts.get(&worker3), Some(&1)); // Has 1
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_remove_data() {
+        let tracker = DataLocationTracker::new();
+        let worker = WorkerId::new();
+
+        tracker.track_data("temp_data", worker).await;
+        assert_eq!(tracker.data_count().await, 1);
+
+        let removed = tracker.remove_data("temp_data").await;
+        assert!(removed);
+        assert_eq!(tracker.data_count().await, 0);
+
+        // Removing again should return false
+        let removed_again = tracker.remove_data("temp_data").await;
+        assert!(!removed_again);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_remove_worker() {
+        let tracker = DataLocationTracker::new();
+        let worker1 = WorkerId::new();
+        let worker2 = WorkerId::new();
+
+        tracker.track_data("data_1", worker1).await;
+        tracker.track_data("data_2", worker1).await;
+        tracker.track_data("data_3", worker1).await;
+        tracker.track_data("data_1", worker2).await;
+
+        assert_eq!(tracker.data_count().await, 3);
+
+        // Remove worker1
+        let removed_count = tracker.remove_worker(worker1).await;
+        assert_eq!(removed_count, 3);
+
+        // data_1 should still exist (worker2 has it)
+        // data_2 and data_3 should be gone (only worker1 had them)
+        assert_eq!(tracker.data_count().await, 1);
+
+        let data_1_locations = tracker.locate_data("data_1").await;
+        assert_eq!(data_1_locations.len(), 1);
+        assert!(data_1_locations.contains(&worker2));
+
+        let data_2_locations = tracker.locate_data("data_2").await;
+        assert_eq!(data_2_locations.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_clear() {
+        let tracker = DataLocationTracker::new();
+        let worker = WorkerId::new();
+
+        tracker.track_data("data_1", worker).await;
+        tracker.track_data("data_2", worker).await;
+        assert_eq!(tracker.data_count().await, 2);
+
+        tracker.clear().await;
+        assert_eq!(tracker.data_count().await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_default() {
+        let tracker = DataLocationTracker::default();
+        assert_eq!(tracker.data_count().await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_duplicate_tracking() {
+        let tracker = DataLocationTracker::new();
+        let worker = WorkerId::new();
+
+        // Track same data multiple times on same worker
+        tracker.track_data("data", worker).await;
+        tracker.track_data("data", worker).await;
+        tracker.track_data("data", worker).await;
+
+        // Should only appear once
+        let locations = tracker.locate_data("data").await;
+        assert_eq!(locations.len(), 1);
+        assert!(locations.contains(&worker));
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_batch_empty() {
+        let tracker = DataLocationTracker::new();
+        let worker = WorkerId::new();
+
+        tracker.track_data("exists", worker).await;
+
+        // Query for data that doesn't exist
+        let data_keys = vec!["nonexistent1".to_string(), "nonexistent2".to_string()];
+        let counts = tracker.locate_data_batch(&data_keys).await;
+
+        assert_eq!(counts.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_data_location_tracker_batch_partial() {
+        let tracker = DataLocationTracker::new();
+        let worker = WorkerId::new();
+
+        tracker.track_data("exists", worker).await;
+
+        // Query mix of existing and non-existing
+        let data_keys = vec!["exists".to_string(), "nonexistent".to_string()];
+        let counts = tracker.locate_data_batch(&data_keys).await;
+
+        assert_eq!(counts.get(&worker), Some(&1)); // Only counts "exists"
     }
 }
