@@ -7,7 +7,7 @@
 .DELETE_ON_ERROR:
 .ONESHELL:
 
-.PHONY: help tier1 tier2 tier3 chaos-test fuzz kaizen build test test-fast coverage coverage-check lint lint-fast fmt fmt-check check docs clean all quality-gates bench bench-save-baseline bench-compare audit mutation dev install-tools validate-examples pmat-tdg pmat-analyze pmat-score pmat-all profile profile-flamegraph bashrs-all
+.PHONY: help tier1 tier2 tier3 chaos-test fuzz kaizen build test test-fast coverage coverage-check lint lint-fast fmt fmt-check check docs build-book serve-book test-book validate-book install-hooks clean all quality-gates bench bench-save-baseline bench-compare audit mutation dev install-tools validate-examples pmat-tdg pmat-analyze pmat-score pmat-all profile profile-flamegraph bashrs-all
 
 # ============================================================================
 # TIER 1: ON-SAVE (Sub-second feedback)
@@ -309,10 +309,34 @@ check: ## Cargo check (fast compilation check)
 docs: ## Generate and open documentation
 	cargo doc --no-deps --all-features --document-private-items --open
 
+build-book: ## Build mdBook documentation
+	@echo "📖 Building mdBook..."
+	@command -v mdbook >/dev/null 2>&1 || { echo "❌ mdbook not installed. Run: cargo install mdbook"; exit 1; }
+	@mdbook build book/
+	@echo "✅ Book built successfully"
+	@echo "   Output: book/book/index.html"
+
+serve-book: ## Serve book locally with live reload
+	@echo "📖 Serving mdBook at http://localhost:3000..."
+	@command -v mdbook >/dev/null 2>&1 || { echo "❌ mdbook not installed. Run: cargo install mdbook"; exit 1; }
+	@mdbook serve book/
+
+test-book: ## Test mdBook for broken links
+	@echo "🔍 Testing mdBook for broken links..."
+	@command -v mdbook >/dev/null 2>&1 || { echo "❌ mdbook not installed. Run: cargo install mdbook"; exit 1; }
+	@mdbook test book/
+
+validate-book: build-book ## Validate book builds without errors
+	@echo "✅ Book validation passed"
+
+install-hooks: ## Install git pre-commit hooks
+	@echo "🔧 Installing git hooks..."
+	@./scripts/install-hooks.sh
+
 clean: ## Clean build artifacts
 	cargo clean
 	rm -rf target/ lcov.info mutants.out/ mutation-results*.txt
-	rm -rf .performance-baselines/ .kaizen/
+	rm -rf .performance-baselines/ .kaizen/ book/book/
 
 quality-gates: lint fmt-check test-fast coverage ## Run all quality gates (pre-commit)
 	@echo ""

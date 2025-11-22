@@ -28,8 +28,9 @@ num_cpus = { version = "1.16", optional = true }
 
 # GPU backend (pure Rust via gfx-rs)
 # wgpu provides cross-platform GPU compute (Vulkan/Metal/DX12/WebGPU)
-wgpu = { version = "23.0", optional = true }
+wgpu = { version = "23.0", features = ["fragile-send-sync-non-atomic-wasm"], optional = true }
 pollster = { version = "0.4", optional = true }  # Block on GPU async operations
+futures = "0.3"  # Async utilities for GPU operations
 
 # Serialization (ubiquitous, zero-C)
 serde = { version = "1.0", features = ["derive"] }
