@@ -121,7 +121,7 @@ impl GpuExecutor {
                     label: Some("Repartir GPU Device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
-                    memory_hints: Default::default(),
+                    memory_hints: wgpu::MemoryHints::default(),
                 },
                 None,
             )
@@ -199,6 +199,7 @@ impl GpuExecutor {
     /// - Pipeline setup and dispatch
     ///
     /// These will be implemented in v1.2 with rust-gpu integration.
+    #[allow(clippy::unused_async)]
     async fn execute_compute(&self, task: Task) -> Result<ExecutionResult> {
         let task_id = task.id();
 
@@ -211,7 +212,8 @@ impl GpuExecutor {
         Err(RepartirError::InvalidTask {
             reason: "GPU executor v1.1 does not support task execution yet. \
                      Binary tasks cannot run on GPU. \
-                     For GPU compute, use dedicated compute shaders (v1.2+).".to_string(),
+                     For GPU compute, use dedicated compute shaders (v1.2+)."
+                .to_string(),
         })
     }
 }

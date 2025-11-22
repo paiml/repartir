@@ -60,17 +60,26 @@ async fn main() -> Result<()> {
     // All subscribers receive the message
     if let Ok(m) = worker1.try_recv() {
         println!("  Worker 1 received: {}", m.as_text()?);
-        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
+        println!(
+            "    Priority: {}",
+            m.get_metadata("priority").unwrap_or("none")
+        );
     }
 
     if let Ok(m) = worker2.try_recv() {
         println!("  Worker 2 received: {}", m.as_text()?);
-        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
+        println!(
+            "    Priority: {}",
+            m.get_metadata("priority").unwrap_or("none")
+        );
     }
 
     if let Ok(m) = worker3.try_recv() {
         println!("  Worker 3 received: {}", m.as_text()?);
-        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
+        println!(
+            "    Priority: {}",
+            m.get_metadata("priority").unwrap_or("none")
+        );
     }
 
     println!();
@@ -130,17 +139,21 @@ async fn main() -> Result<()> {
     // Both monitors receive all metrics
     println!("  Monitor 1 received:");
     while let Ok(m) = monitor1.try_recv() {
-        println!("    - {} (source: {})",
+        println!(
+            "    - {} (source: {})",
             m.as_text()?,
-            m.get_metadata("source").unwrap_or("unknown"));
+            m.get_metadata("source").unwrap_or("unknown")
+        );
     }
 
     println!();
     println!("  Monitor 2 received:");
     while let Ok(m) = monitor2.try_recv() {
-        println!("    - {} (source: {})",
+        println!(
+            "    - {} (source: {})",
             m.as_text()?,
-            m.get_metadata("source").unwrap_or("unknown"));
+            m.get_metadata("source").unwrap_or("unknown")
+        );
     }
 
     println!();

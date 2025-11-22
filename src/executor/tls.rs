@@ -2,8 +2,6 @@
 //!
 //! Provides TLS/SSL encryption for remote executor connections using rustls.
 
-#![cfg(feature = "remote-tls")]
-
 use crate::error::{RepartirError, Result};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::fs::File;
@@ -44,11 +42,11 @@ impl TlsConfig {
     ///
     /// Returns an error if client TLS is not configured.
     pub fn client_config(&self) -> Result<Arc<rustls::ClientConfig>> {
-        self.client_config.clone().ok_or_else(|| {
-            RepartirError::InvalidTask {
+        self.client_config
+            .clone()
+            .ok_or_else(|| RepartirError::InvalidTask {
                 reason: "Client TLS not configured".to_string(),
-            }
-        })
+            })
     }
 
     /// Returns the server configuration.
@@ -57,15 +55,16 @@ impl TlsConfig {
     ///
     /// Returns an error if server TLS is not configured.
     pub fn server_config(&self) -> Result<Arc<rustls::ServerConfig>> {
-        self.server_config.clone().ok_or_else(|| {
-            RepartirError::InvalidTask {
+        self.server_config
+            .clone()
+            .ok_or_else(|| RepartirError::InvalidTask {
                 reason: "Server TLS not configured".to_string(),
-            }
-        })
+            })
     }
 }
 
 /// Builder for TLS configuration.
+#[allow(clippy::struct_field_names)]
 pub struct TlsConfigBuilder {
     client_cert_path: Option<String>,
     client_key_path: Option<String>,
@@ -123,54 +122,49 @@ impl TlsConfigBuilder {
         let mut server_config = None;
 
         // Build client configuration if cert/key provided
-        if let (Some(cert_path), Some(key_path)) = (&self.client_cert_path, &self.client_key_path)
-        {
+        if let (Some(cert_path), Some(key_path)) = (&self.client_cert_path, &self.client_key_path) {
             debug!("Loading client TLS certificate from {cert_path}");
             let certs = load_certs(cert_path)?;
             let key = load_private_key(key_path)?;
 
-            let mut config = rustls::ClientConfig::builder()
-                .with_root_certificates(rustls::RootCertStore::empty())
-                .with_client_auth_cert(certs, key)
-                .map_err(|e| RepartirError::InvalidTask {
-                    reason: format!("Failed to build client TLS config: {e}"),
-                })?;
-
-            // Add CA certificate if provided
-            if let Some(ca_path) = &self.ca_cert_path {
+            // Build config with or without CA certificate
+            let config = if let Some(ca_path) = &self.ca_cert_path {
                 debug!("Loading CA certificate from {ca_path}");
                 let ca_certs = load_certs(ca_path)?;
                 let mut root_store = rustls::RootCertStore::empty();
                 for cert in ca_certs {
-                    root_store.add(cert).map_err(|e| {
-                        RepartirError::InvalidTask {
+                    root_store
+                        .add(cert)
+                        .map_err(|e| RepartirError::InvalidTask {
                             reason: format!("Failed to add CA certificate: {e}"),
-                        }
-                    })?;
+                        })?;
                 }
-                config = rustls::ClientConfig::builder()
+                rustls::ClientConfig::builder()
                     .with_root_certificates(root_store)
-                    .with_client_auth_cert(
-                        load_certs(cert_path)?,
-                        load_private_key(key_path)?,
-                    )
+                    .with_client_auth_cert(certs, key)
                     .map_err(|e| RepartirError::InvalidTask {
-                        reason: format!("Failed to rebuild client TLS config: {e}"),
-                    })?;
+                        reason: format!("Failed to build client TLS config with CA: {e}"),
+                    })?
             } else {
                 // No CA cert - disable verification (development only!)
+                let mut config = rustls::ClientConfig::builder()
+                    .with_root_certificates(rustls::RootCertStore::empty())
+                    .with_client_auth_cert(certs, key)
+                    .map_err(|e| RepartirError::InvalidTask {
+                        reason: format!("Failed to build client TLS config: {e}"),
+                    })?;
                 config
                     .dangerous()
                     .set_certificate_verifier(Arc::new(NoCertificateVerification));
-            }
+                config
+            };
 
             info!("Client TLS configured");
             client_config = Some(Arc::new(config));
         }
 
         // Build server configuration if cert/key provided
-        if let (Some(cert_path), Some(key_path)) = (&self.server_cert_path, &self.server_key_path)
-        {
+        if let (Some(cert_path), Some(key_path)) = (&self.server_cert_path, &self.server_key_path) {
             debug!("Loading server TLS certificate from {cert_path}");
             let certs = load_certs(cert_path)?;
             let key = load_private_key(key_path)?;
@@ -195,7 +189,7 @@ impl TlsConfigBuilder {
 
 /// Loads certificates from a PEM file.
 fn load_certs<P: AsRef<Path>>(path: P) -> Result<Vec<CertificateDer<'static>>> {
-    let file = File::open(path.as_ref()).map_err(|e| RepartirError::Io(e))?;
+    let file = File::open(path.as_ref()).map_err(RepartirError::Io)?;
     let mut reader = BufReader::new(file);
 
     let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut reader)
@@ -209,7 +203,7 @@ fn load_certs<P: AsRef<Path>>(path: P) -> Result<Vec<CertificateDer<'static>>> {
 
 /// Loads a private key from a PEM file.
 fn load_private_key<P: AsRef<Path>>(path: P) -> Result<PrivateKeyDer<'static>> {
-    let file = File::open(path.as_ref()).map_err(|e| RepartirError::Io(e))?;
+    let file = File::open(path.as_ref()).map_err(RepartirError::Io)?;
     let mut reader = BufReader::new(file);
 
     // Try reading as PKCS#8 first, then RSA, then EC
@@ -281,8 +275,7 @@ mod tests {
             .server_key("server.key")
             .ca_cert("ca.pem");
 
-        // Builder should compile and be chainable
-        assert!(true);
+        // Builder should compile and be chainable (compilation is the test)
     }
 
     #[test]

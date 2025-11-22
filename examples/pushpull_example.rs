@@ -58,9 +58,11 @@ async fn main() -> Result<()> {
     println!("  Consumer processing:");
     for _ in 0..5 {
         if let Some(msg) = channel.pull().await {
-            println!("    - {} (priority: {})",
+            println!(
+                "    - {} (priority: {})",
                 msg.as_text()?,
-                msg.get_metadata("priority").unwrap_or("unknown"));
+                msg.get_metadata("priority").unwrap_or("unknown")
+            );
         }
     }
 
