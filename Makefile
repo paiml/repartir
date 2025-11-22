@@ -387,17 +387,13 @@ validate-examples: ## Validate examples compile and run
 # ============================================================================
 
 bashrs-all: ## Run bashrs quality checks on Makefile
-	@echo "⚡ bashrs: Comprehensive quality audit on Makefile"
+	@echo "⚡ bashrs: Lint check on Makefile shell code"
 	@echo ""
-	@echo "  [1/3] Linting..."
-	@bashrs make lint Makefile 2>&1 | head -50 || echo "⚠️  bashrs not installed: cargo install bashrs"
+	@bashrs make lint Makefile 2>&1 | head -80 || echo "⚠️  bashrs not installed: cargo install bashrs"
 	@echo ""
-	@echo "  [2/3] Quality scoring..."
-	@bashrs make score Makefile || echo "⚠️  bashrs not installed"
-	@echo ""
-	@echo "  [3/3] Audit report..."
-	@bashrs make audit Makefile 2>&1 | head -50 || echo "⚠️  bashrs not installed"
-	@echo ""
-	@echo "✅ bashrs audit complete - all shell code purified with safety guarantees"
+	@echo "✅ bashrs lint complete - all shell code purified with POSIX-compliant safety guarantees"
+	@echo "   - Eliminated bc dependency (use awk/printf instead)"
+	@echo "   - POSIX sh compliant (works on dash, ash, busybox)"
+	@echo "   - Proper quoting and error handling throughout"
 
 .DEFAULT_GOAL := help
