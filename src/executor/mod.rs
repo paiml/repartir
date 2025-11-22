@@ -11,6 +11,9 @@ pub mod gpu;
 #[cfg(feature = "remote")]
 pub mod remote;
 
+#[cfg(feature = "remote-tls")]
+pub mod tls;
+
 use crate::error::Result;
 use crate::task::{ExecutionResult, Task};
 use std::future::Future;
