@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::uninlined_format_args, clippy::collection_is_never_read)]
 //! Property-based tests for repartir (Certeza Tier 2)
 //!
 //! These tests use proptest to verify invariants hold across

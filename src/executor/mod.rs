@@ -5,6 +5,9 @@
 
 pub mod cpu;
 
+#[cfg(feature = "remote")]
+pub mod remote;
+
 use crate::error::Result;
 use crate::task::{ExecutionResult, Task};
 use std::future::Future;
@@ -45,10 +48,11 @@ pub trait Executor: Send + Sync {
     fn capacity(&self) -> usize;
 
     /// Returns a human-readable name for this executor.
-    fn name(&self) -> &str;
+    fn name(&self) -> &'static str;
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
