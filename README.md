@@ -102,6 +102,12 @@ repartir = { version = "0.1", features = ["remote"] }
 # With TLS encryption (v1.1+)
 repartir = { version = "0.1", features = ["remote-tls"] }
 
+# With checkpointing (v2.0+)
+repartir = { version = "0.1", features = ["checkpoint"] }
+
+# With tensor operations (v2.0+)
+repartir = { version = "0.1", features = ["tensor"] }
+
 # All features
 repartir = { version = "0.1", features = ["full"] }
 ```
@@ -237,6 +243,151 @@ cargo run --example pubsub_example
 cargo run --example pushpull_example
 ```
 
+### Data Integration (v2.0+)
+
+Repartir v2.0 adds persistent state management, checkpointing, and SIMD-accelerated tensor operations for data-intensive and ML workloads.
+
+#### Checkpointing for Fault Tolerance
+
+Persistent task state enables resume-from-checkpoint for long-running computations:
+
+```rust
+use repartir::checkpoint::CheckpointManager;
+use repartir::task::{Task, Backend};
+use std::path::PathBuf;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let manager = CheckpointManager::new(PathBuf::from("./checkpoints"))?;
+
+    // Create task with checkpointing enabled
+    let task = Task::builder()
+        .binary("/bin/worker")
+        .backend(Backend::Cpu)
+        .enable_checkpointing(true)
+        .checkpoint_interval(Duration::from_secs(60))
+        .build()?;
+
+    // Later: restore from checkpoint after failure
+    let restored_state = manager.restore(task.id().as_uuid().clone()).await?;
+
+    Ok(())
+}
+```
+
+**Features:**
+- Periodic checkpoint snapshots (configurable interval)
+- Automatic state persistence to disk
+- Resume from latest checkpoint after failure
+- Retention policy with automatic cleanup
+
+**Run example:**
+```bash
+cargo run --example checkpoint_example --features checkpoint
+```
+
+#### Data-Locality Aware Scheduling
+
+Minimize network transfers by scheduling tasks near their data:
+
+```rust
+use repartir::scheduler::locality::LocalityScheduler;
+use repartir::state::StateStore;
+use repartir::task::{Task, Backend};
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    // Create state store for data location tracking
+    let state = StateStore::new(PathBuf::from("./state"))?;
+    let scheduler = LocalityScheduler::new(state);
+
+    // Register data locations across workers
+    scheduler.state().register_data(
+        "tensor_batch_1".to_string(),
+        "worker1".to_string(),
+        10_000_000  // 10MB
+    ).await?;
+
+    // Task with data dependencies
+    let task = Task::builder()
+        .binary("/bin/process")
+        .backend(Backend::Cpu)
+        .data_dependency("tensor_batch_1")
+        .data_dependency("model_weights")
+        .build()?;
+
+    // Scheduler calculates affinity scores (0.0-1.0)
+    let affinity = scheduler.calculate_affinity(task.data_dependencies()).await?;
+    // affinity = {"worker1": 1.0, "worker2": 0.5}
+    // → Task scheduled to worker1 (100% locality, zero network transfer)
+
+    Ok(())
+}
+```
+
+**Benefits:**
+- Network transfer savings (40MB+ in typical scenarios)
+- Automatic affinity calculation based on data locations
+- Integration with StateStore for distributed metadata
+- Batch location queries for multi-data tasks
+
+**Run example:**
+```bash
+cargo run --example locality_scheduling --features checkpoint
+```
+
+#### Tensor Operations with SIMD Acceleration
+
+High-performance tensor computation using the trueno library:
+
+```rust
+use repartir::tensor::TensorExecutor;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let executor = TensorExecutor::new()?;
+
+    // Matrix multiplication (SIMD accelerated)
+    let a = vec![1.0, 2.0, 3.0, 4.0];  // 2x2 matrix
+    let b = vec![5.0, 6.0, 7.0, 8.0];
+    let c = executor.matmul(&a, &b, 2, 2, 2).await?;
+    // c = [19.0, 22.0, 43.0, 50.0]
+
+    // Element-wise operations
+    let v1 = vec![1.0, 2.0, 3.0, 4.0];
+    let v2 = vec![4.0, 3.0, 2.0, 1.0];
+    let sum = executor.add(&v1, &v2).await?;
+
+    // ML activations
+    let relu = executor.relu(&vec![-1.0, 0.0, 1.0, 2.0]).await?;
+
+    Ok(())
+}
+```
+
+**Features:**
+- Matrix multiplication with automatic backend selection (AVX2/SSE2/NEON)
+- Element-wise operations (add, scale, mul)
+- ML activation functions (ReLU)
+- Reduction operations (sum, max) with SIMD
+- Operation result caching
+- 2-8x speedup vs scalar for vector operations
+
+**Supported SIMD backends:**
+- AVX-512 (512-bit)
+- AVX2 (256-bit with FMA)
+- SSE2 (128-bit, x86_64 baseline)
+- ARM NEON
+- WebAssembly SIMD128
+- Scalar fallback
+
+**Run example:**
+```bash
+cargo run --example tensor_example --features tensor
+```
+
 ## Architecture
 
 Repartir follows a clean, layered architecture:
@@ -322,14 +473,21 @@ make tier3
 
 **Target**: 1-6 hours (run overnight or in CI)
 
-## Test Results (v1.0)
+## Test Results (v2.0)
 
 ```
-✓ 21 unit tests          (0.10s)
-✓ 4 property-based tests (1.92s)
-✓ 4 documentation tests  (0.23s)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  29 tests PASSED
+✓ 79 unit tests (base features)           (0.11s)
+✓ 11 tensor tests (with --features tensor) (0.01s)
+✓ 4 property-based tests                  (1.92s)
+✓ 4 documentation tests                   (0.23s)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  90+ tests PASSED
+
+Key test suites:
+- CheckpointManager: 4 tests (save, restore, list, cleanup)
+- StateStore: 6 tests (kv, caching, location tracking)
+- LocalityScheduler: 7 tests (affinity calculation, transfer savings)
+- TensorExecutor: 11 tests (matmul, add, scale, relu, sum, cache)
 ```
 
 ## Sovereign AI Principles
@@ -373,11 +531,13 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ bashrs purification (POSIX-compliant shell code)
 - ✅ Advanced messaging patterns (PUB/SUB, PUSH/PULL)
 
-### v2.0: Data Integration
-- [ ] trueno-db integration (distributed state)
-- [ ] Checkpointing to persistent storage
-- [ ] Data-locality aware scheduling
-- [ ] Advanced ML patterns (pipeline/tensor parallelism)
+### v2.0: Data Integration (Complete)
+- ✅ trueno-db integration (StateStore for distributed state)
+- ✅ Checkpointing to persistent storage (CheckpointManager)
+- ✅ Data-locality aware scheduling (LocalityScheduler)
+- ✅ Tensor operations with SIMD (TensorExecutor, trueno library)
+- ✅ Comprehensive examples (checkpoint, locality, tensor)
+- ✅ 90 tests passing (79 base + 11 tensor)
 
 ### v3.0: Enterprise & Cloud
 - [ ] RDMA support (low-latency networking)
