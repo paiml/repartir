@@ -113,6 +113,14 @@ pub struct Task {
     /// GPU workgroup dimensions (x, y, z) - GPU only.
     #[cfg(feature = "gpu")]
     workgroup_size: Option<(u32, u32, u32)>,
+    /// Whether checkpointing is enabled (v2.0).
+    #[cfg(feature = "checkpoint")]
+    checkpoint_enabled: bool,
+    /// Checkpoint interval (v2.0).
+    #[cfg(feature = "checkpoint")]
+    checkpoint_interval: Option<Duration>,
+    /// Data dependencies for locality-aware scheduling (v2.0).
+    data_dependencies: Vec<String>,
 }
 
 impl Task {
@@ -191,6 +199,26 @@ impl Task {
     pub const fn workgroup_size(&self) -> Option<(u32, u32, u32)> {
         self.workgroup_size
     }
+
+    /// Returns whether checkpointing is enabled (v2.0).
+    #[cfg(feature = "checkpoint")]
+    #[must_use]
+    pub const fn checkpoint_enabled(&self) -> bool {
+        self.checkpoint_enabled
+    }
+
+    /// Returns the checkpoint interval (v2.0).
+    #[cfg(feature = "checkpoint")]
+    #[must_use]
+    pub const fn checkpoint_interval(&self) -> Option<Duration> {
+        self.checkpoint_interval
+    }
+
+    /// Returns the data dependencies (v2.0).
+    #[must_use]
+    pub fn data_dependencies(&self) -> &[String] {
+        &self.data_dependencies
+    }
 }
 
 /// Builder for `Task`.
@@ -210,6 +238,11 @@ pub struct TaskBuilder {
     output_buffer_sizes: Vec<u64>,
     #[cfg(feature = "gpu")]
     workgroup_size: Option<(u32, u32, u32)>,
+    #[cfg(feature = "checkpoint")]
+    checkpoint_enabled: bool,
+    #[cfg(feature = "checkpoint")]
+    checkpoint_interval: Option<Duration>,
+    data_dependencies: Vec<String>,
 }
 
 impl Default for TaskBuilder {
@@ -229,6 +262,11 @@ impl Default for TaskBuilder {
             output_buffer_sizes: Vec::new(),
             #[cfg(feature = "gpu")]
             workgroup_size: None,
+            #[cfg(feature = "checkpoint")]
+            checkpoint_enabled: false,
+            #[cfg(feature = "checkpoint")]
+            checkpoint_interval: None,
+            data_dependencies: Vec::new(),
         }
     }
 }
@@ -369,6 +407,52 @@ impl TaskBuilder {
         self
     }
 
+    /// Enables checkpointing for this task (v2.0).
+    ///
+    /// When enabled, the task can be checkpointed periodically
+    /// and resumed from the last checkpoint on failure.
+    ///
+    /// Requires the `checkpoint` feature.
+    #[cfg(feature = "checkpoint")]
+    #[must_use]
+    pub const fn enable_checkpointing(mut self, enabled: bool) -> Self {
+        self.checkpoint_enabled = enabled;
+        self
+    }
+
+    /// Sets the checkpoint interval (v2.0).
+    ///
+    /// The task will be checkpointed at this interval.
+    /// Only effective when checkpointing is enabled.
+    ///
+    /// Requires the `checkpoint` feature.
+    #[cfg(feature = "checkpoint")]
+    #[must_use]
+    pub const fn checkpoint_interval(mut self, interval: Duration) -> Self {
+        self.checkpoint_interval = Some(interval);
+        self
+    }
+
+    /// Sets data dependencies for locality-aware scheduling (v2.0).
+    ///
+    /// The scheduler will prefer workers that have these data items cached.
+    ///
+    /// # Arguments
+    ///
+    /// * `deps` - List of data keys (tensor IDs, checkpoint IDs, file paths)
+    #[must_use]
+    pub fn data_dependencies(mut self, deps: Vec<String>) -> Self {
+        self.data_dependencies = deps;
+        self
+    }
+
+    /// Adds a single data dependency (v2.0).
+    #[must_use]
+    pub fn data_dependency<S: Into<String>>(mut self, dep: S) -> Self {
+        self.data_dependencies.push(dep.into());
+        self
+    }
+
     /// Builds the task.
     ///
     /// # Errors
@@ -406,6 +490,11 @@ impl TaskBuilder {
             output_buffer_sizes: self.output_buffer_sizes,
             #[cfg(feature = "gpu")]
             workgroup_size: self.workgroup_size,
+            #[cfg(feature = "checkpoint")]
+            checkpoint_enabled: self.checkpoint_enabled,
+            #[cfg(feature = "checkpoint")]
+            checkpoint_interval: self.checkpoint_interval,
+            data_dependencies: self.data_dependencies,
         })
     }
 }
@@ -711,5 +800,58 @@ mod tests {
             .build()
             .unwrap();
         assert_eq!(task.backend(), Backend::Remote);
+    }
+
+    #[cfg(feature = "checkpoint")]
+    #[test]
+    fn test_checkpoint_enabled() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .enable_checkpointing(true)
+            .checkpoint_interval(Duration::from_secs(60))
+            .build()
+            .unwrap();
+
+        assert!(task.checkpoint_enabled());
+        assert_eq!(task.checkpoint_interval(), Some(Duration::from_secs(60)));
+    }
+
+    #[cfg(feature = "checkpoint")]
+    #[test]
+    fn test_checkpoint_disabled_by_default() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .build()
+            .unwrap();
+
+        assert!(!task.checkpoint_enabled());
+        assert_eq!(task.checkpoint_interval(), None);
+    }
+
+    #[test]
+    fn test_data_dependencies() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .data_dependencies(vec!["tensor_1".to_string(), "checkpoint_42".to_string()])
+            .build()
+            .unwrap();
+
+        assert_eq!(task.data_dependencies().len(), 2);
+        assert_eq!(task.data_dependencies()[0], "tensor_1");
+        assert_eq!(task.data_dependencies()[1], "checkpoint_42");
+    }
+
+    #[test]
+    fn test_data_dependency_single() {
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .data_dependency("tensor_batch_42")
+            .data_dependency("checkpoint_123")
+            .build()
+            .unwrap();
+
+        assert_eq!(task.data_dependencies().len(), 2);
+        assert_eq!(task.data_dependencies()[0], "tensor_batch_42");
+        assert_eq!(task.data_dependencies()[1], "checkpoint_123");
     }
 }

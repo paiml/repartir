@@ -74,6 +74,7 @@
 #![warn(clippy::nursery)]
 #![deny(unsafe_code)] // v1.0: No unsafe code (Sovereign AI requirement)
 
+pub mod checkpoint;
 pub mod error;
 pub mod executor;
 pub mod messaging;
