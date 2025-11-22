@@ -7,13 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-11-22
+
 ### Added
-- Comprehensive test suite with 92 tests achieving 88.58% code coverage
+- Comprehensive test suite with 105+ tests achieving 88.58% code coverage
+  - 92 unit tests
+  - 9 integration tests
+  - 4 property-based tests
 - pmat quality enforcement with pre-commit hooks (TDG score: 94.6/100, Grade A)
+- Integration test suite covering end-to-end workflows
 - Mock TCP server for remote executor testing
 - TLS configuration validation and error handling tests
 - CPU executor edge case tests (large output, empty output, signal termination)
 - Coverage report files added to .gitignore
+- Complete CHANGELOG following Keep a Changelog format
 
 ### Changed
 - Improved remote executor test coverage from 28.92% to 80.60%
@@ -46,5 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - serde 1.0+ for serialization
 - uuid 1.6+ for stable task IDs
 
-[Unreleased]: https://github.com/paiml/repartir/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/paiml/repartir/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/paiml/repartir/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/paiml/repartir/releases/tag/v0.1.0
