@@ -194,12 +194,16 @@ impl PubSubChannel {
     ///
     /// Returns a receiver that will receive all messages published to this topic.
     pub async fn subscribe(&self, topic: &str) -> broadcast::Receiver<Message> {
-        let mut topics = self.topics.write().await;
-
-        let sender = topics.entry(topic.to_string()).or_insert_with(|| {
-            debug!("Creating new topic: {topic}");
-            broadcast::channel(self.capacity).0
-        });
+        let sender = {
+            let mut topics = self.topics.write().await;
+            topics
+                .entry(topic.to_string())
+                .or_insert_with(|| {
+                    debug!("Creating new topic: {topic}");
+                    broadcast::channel(self.capacity).0
+                })
+                .clone()
+        };
 
         sender.subscribe()
     }
@@ -215,9 +219,11 @@ impl PubSubChannel {
         let topics = self.topics.read().await;
 
         if let Some(sender) = topics.get(topic) {
-            let count = sender.send(message).map_err(|_| RepartirError::InvalidTask {
-                reason: format!("No active subscribers for topic: {topic}"),
-            })?;
+            let count = sender
+                .send(message)
+                .map_err(|_| RepartirError::InvalidTask {
+                    reason: format!("No active subscribers for topic: {topic}"),
+                })?;
             debug!("Published message to {count} subscribers on topic '{topic}'");
             Ok(count)
         } else {
@@ -235,7 +241,9 @@ impl PubSubChannel {
     /// Returns the number of subscribers for a specific topic.
     pub async fn subscriber_count(&self, topic: &str) -> usize {
         let topics = self.topics.read().await;
-        topics.get(topic).map_or(0, broadcast::Sender::receiver_count)
+        topics
+            .get(topic)
+            .map_or(0, broadcast::Sender::receiver_count)
     }
 }
 

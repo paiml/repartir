@@ -169,7 +169,10 @@ async fn main() -> Result<()> {
 
     // Create CPU executor
     let executor = Arc::new(CpuExecutor::new());
-    info!("CPU executor initialized with {} cores", executor.capacity());
+    info!(
+        "CPU executor initialized with {} cores",
+        executor.capacity()
+    );
 
     // Listen for connections
     let listener = TcpListener::bind(bind_addr).await.map_err(|e| {

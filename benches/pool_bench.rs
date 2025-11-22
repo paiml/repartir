@@ -1,4 +1,10 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::explicit_iter_loop, clippy::cast_sign_loss, clippy::semicolon_if_nothing_returned)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::explicit_iter_loop,
+    clippy::cast_sign_loss,
+    clippy::semicolon_if_nothing_returned
+)]
 //! Pool benchmarks comparing repartir to Ray/Dask patterns
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
@@ -72,10 +78,7 @@ fn bench_parallel_speedup(c: &mut Criterion) {
     group.bench_function("parallel_10_tasks_4_workers", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let pool = Pool::builder()
-                    .cpu_workers(4)
-                    .build()
-                    .unwrap();
+                let pool = Pool::builder().cpu_workers(4).build().unwrap();
 
                 let mut tasks = Vec::new();
                 for i in 0..10 {
@@ -110,10 +113,7 @@ fn bench_task_latency(c: &mut Criterion) {
     group.bench_function("single_task_echo", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let pool = Pool::builder()
-                    .cpu_workers(1)
-                    .build()
-                    .unwrap();
+                let pool = Pool::builder().cpu_workers(1).build().unwrap();
 
                 let task = Task::builder()
                     .binary("/bin/echo")
@@ -144,10 +144,7 @@ fn bench_cpu_intensive(c: &mut Criterion) {
             |b, &num_workers| {
                 b.iter(|| {
                     rt.block_on(async {
-                        let pool = Pool::builder()
-                            .cpu_workers(num_workers)
-                            .build()
-                            .unwrap();
+                        let pool = Pool::builder().cpu_workers(num_workers).build().unwrap();
 
                         // Submit CPU-bound tasks (calculate primes)
                         let mut tasks = Vec::new();
@@ -187,10 +184,7 @@ fn bench_priority_scheduling(c: &mut Criterion) {
     group.bench_function("mixed_priority_20_tasks", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let pool = Pool::builder()
-                    .cpu_workers(2)
-                    .build()
-                    .unwrap();
+                let pool = Pool::builder().cpu_workers(2).build().unwrap();
 
                 let mut tasks = Vec::new();
 

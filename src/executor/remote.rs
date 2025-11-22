@@ -77,10 +77,8 @@ impl RemoteWorker {
             let mut stream = self.stream.write().await;
 
             // Write length as u32
-            let len = u32::try_from(encoded.len()).map_err(|_| {
-                RepartirError::InvalidTask {
-                    reason: "Task too large".to_string(),
-                }
+            let len = u32::try_from(encoded.len()).map_err(|_| RepartirError::InvalidTask {
+                reason: "Task too large".to_string(),
             })?;
             stream.write_all(&len.to_le_bytes()).await.map_err(|e| {
                 error!("Failed to send task length to {}: {e}", self.address);
@@ -100,7 +98,10 @@ impl RemoteWorker {
             drop(stream);
         }
 
-        debug!("Task {task_id} sent to {}, waiting for result", self.address);
+        debug!(
+            "Task {task_id} sent to {}, waiting for result",
+            self.address
+        );
 
         // Receive result
         {
@@ -131,7 +132,11 @@ impl RemoteWorker {
             })?;
 
             if let RemoteMessage::TaskResult(result) = message {
-                debug!("Received result for task {} from {}", result.task_id(), self.address);
+                debug!(
+                    "Received result for task {} from {}",
+                    result.task_id(),
+                    self.address
+                );
                 Ok(result)
             } else {
                 warn!("Unexpected message type from {}", self.address);

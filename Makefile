@@ -215,8 +215,8 @@ coverage: ## Generate coverage report (≥95% target)
 	@echo "📊 Coverage Summary:"
 	@cargo llvm-cov report --summary-only
 	@echo ""
-	@# bashrs: POSIX-compliant coverage check
-	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$NF}' | sed 's/%//' || echo "0"); \
+	@# bashrs: POSIX-compliant coverage check (extract Lines coverage from column 10)
+	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$10}' | sed 's/%//' || echo "0"); \
 	if [ -z "$$COVERAGE_RAW" ] || [ "$$COVERAGE_RAW" = "-" ]; then \
 		COVERAGE_RAW="0"; \
 	fi; \
@@ -235,8 +235,8 @@ coverage-check: ## Enforce 95% coverage threshold (BLOCKS on failure)
 	@cargo llvm-cov --workspace --lcov --output-path lcov.info > /dev/null 2>&1
 	@# Restore mold linker
 	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
-	@# bashrs: POSIX-compliant coverage check with proper quoting and integer arithmetic
-	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$NF}' | sed 's/%//' || echo "0"); \
+	@# bashrs: POSIX-compliant coverage check (extract Lines coverage from column 10)
+	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$10}' | sed 's/%//' || echo "0"); \
 	if [ -z "$$COVERAGE_RAW" ] || [ "$$COVERAGE_RAW" = "-" ]; then \
 		COVERAGE_RAW="0"; \
 	fi; \

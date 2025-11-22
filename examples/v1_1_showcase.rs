@@ -159,8 +159,22 @@ async fn demo_tls_config() -> Result<()> {
 
             println!("  ✓ TLS Configuration loaded");
             println!();
-            println!("  Client: {}", if tls_config.client_config().is_ok() { "✓ Enabled" } else { "✗ Disabled" });
-            println!("  Server: {}", if tls_config.server_config().is_ok() { "✓ Enabled" } else { "✗ Disabled" });
+            println!(
+                "  Client: {}",
+                if tls_config.client_config().is_ok() {
+                    "✓ Enabled"
+                } else {
+                    "✗ Disabled"
+                }
+            );
+            println!(
+                "  Server: {}",
+                if tls_config.server_config().is_ok() {
+                    "✓ Enabled"
+                } else {
+                    "✗ Disabled"
+                }
+            );
             println!();
             println!("  Security:");
             println!("    • TLS 1.3 encryption");
@@ -187,10 +201,7 @@ async fn demo_tls_config() -> Result<()> {
 async fn demo_priority_scheduling() -> Result<()> {
     section_header("Priority Scheduling - Iron Lotus Quality");
 
-    let pool = Pool::builder()
-        .cpu_workers(4)
-        .max_queue_size(100)
-        .build()?;
+    let pool = Pool::builder().cpu_workers(4).max_queue_size(100).build()?;
 
     println!("  Pool capacity: {} workers", pool.capacity());
     println!();
@@ -228,9 +239,21 @@ async fn demo_priority_scheduling() -> Result<()> {
         let high_result = pool.submit(high_task).await?;
         let duration = start.elapsed();
 
-        println!("  ✓ High:   {} ({:?})", high_result.stdout_str()?.trim(), high_result.duration());
-        println!("  ✓ Normal: {} ({:?})", normal_result.stdout_str()?.trim(), normal_result.duration());
-        println!("  ✓ Low:    {} ({:?})", low_result.stdout_str()?.trim(), low_result.duration());
+        println!(
+            "  ✓ High:   {} ({:?})",
+            high_result.stdout_str()?.trim(),
+            high_result.duration()
+        );
+        println!(
+            "  ✓ Normal: {} ({:?})",
+            normal_result.stdout_str()?.trim(),
+            normal_result.duration()
+        );
+        println!(
+            "  ✓ Low:    {} ({:?})",
+            low_result.stdout_str()?.trim(),
+            low_result.duration()
+        );
         println!();
         println!("  Total execution: {:?}", duration);
     }
@@ -244,10 +267,7 @@ async fn demo_priority_scheduling() -> Result<()> {
 async fn demo_work_stealing_performance() -> Result<()> {
     section_header("Work-Stealing Performance - Parallel Speedup");
 
-    let pool = Pool::builder()
-        .cpu_workers(4)
-        .max_queue_size(100)
-        .build()?;
+    let pool = Pool::builder().cpu_workers(4).max_queue_size(100).build()?;
 
     #[cfg(unix)]
     {
@@ -301,10 +321,7 @@ async fn demo_work_stealing_performance() -> Result<()> {
 async fn demo_fault_tolerance() -> Result<()> {
     section_header("Fault Tolerance - Graceful Error Handling");
 
-    let pool = Pool::builder()
-        .cpu_workers(2)
-        .max_queue_size(50)
-        .build()?;
+    let pool = Pool::builder().cpu_workers(2).max_queue_size(50).build()?;
 
     #[cfg(unix)]
     {
@@ -345,7 +362,11 @@ async fn demo_fault_tolerance() -> Result<()> {
 
 fn section_header(title: &str) {
     println!("┌─────────────────────────────────────────────────────────────┐");
-    println!("│ {} {}", title, " ".repeat(60usize.saturating_sub(title.len())));
+    println!(
+        "│ {} {}",
+        title,
+        " ".repeat(60usize.saturating_sub(title.len()))
+    );
     println!("└─────────────────────────────────────────────────────────────┘");
     println!();
 }
