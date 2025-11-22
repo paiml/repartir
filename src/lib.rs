@@ -79,6 +79,7 @@ pub mod error;
 pub mod executor;
 pub mod messaging;
 pub mod scheduler;
+pub mod state;
 pub mod task;
 
 use error::{RepartirError, Result};
