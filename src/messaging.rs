@@ -472,7 +472,9 @@ mod tests {
         let channel = PubSubChannel::new();
 
         // Publishing to a non-existent topic should error
-        let result = channel.publish("empty_topic", Message::text("Nobody listening")).await;
+        let result = channel
+            .publish("empty_topic", Message::text("Nobody listening"))
+            .await;
         assert!(result.is_err());
     }
 

@@ -304,7 +304,11 @@ ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        temp_file.push(format!("repartir_test_{}_{}.pem", std::process::id(), timestamp));
+        temp_file.push(format!(
+            "repartir_test_{}_{}.pem",
+            std::process::id(),
+            timestamp
+        ));
 
         let mut file = File::create(&temp_file).unwrap();
         file.write_all(content.as_bytes()).unwrap();
