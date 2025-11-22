@@ -2113,10 +2113,12 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 name = "repartir"
 version = "1.0.0"
 dependencies = [
+ "arrow",
  "bincode",
  "criterion",
  "futures",
  "num_cpus",
+ "parquet",
  "pollster",
  "proptest",
  "rustls",

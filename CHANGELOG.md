@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-11-22 (v2.0: Data Integration - Phase 1 & 2)
+
+### Phase 2: Locality-Aware Scheduling (NEW)
+- **Affinity-Based Task Assignment**:
+  - Scheduler automatically calculates worker affinity based on data dependencies
+  - Affinity score: (data items present) / (total data items requested)
+  - `submit_with_affinity()` API for explicit worker preferences
+  - `calculate_affinity()` internal method for automatic scoring
+- **Locality Metrics Tracking**:
+  - New `LocalityMetrics` struct tracks scheduling efficiency
+  - Metrics: total_tasks, tasks_with_dependencies, tasks_with_locality
+  - `hit_rate()` method calculates locality hit rate (0.0 to 1.0)
+  - Real-time tracking via `locality_metrics()` accessor
+- **Enhanced Scheduler**:
+  - Integrated DataLocationTracker for data-aware scheduling
+  - `data_tracker()` accessor for direct tracker access
+  - `clear()` method resets data locations and metrics
+  - 6 new comprehensive tests for locality scheduling
+
+### Phase 1: Foundational Data Tracking
+
+### Added
+- **Parquet Checkpoint Storage**: Checkpoints now use Apache Parquet format for efficient columnar storage
+  - SNAPPY compression reduces checkpoint size by ~5-10x compared to JSON
+  - Backward compatible: supports reading both Parquet (.parquet) and JSON (.json) formats
+  - Schema: checkpoint_id, task_id, iteration, timestamp_micros, data (binary)
+- **Apache Arrow Integration**: Added arrow (v53.0) and parquet (v53.0) dependencies for checkpoint storage
+- **Enhanced Checkpoint Manager**:
+  - `write_parquet()` method for efficient checkpoint serialization
+  - `read_parquet()` method for checkpoint restoration
+  - Automatic format detection in `restore()` and `list_checkpoints()`
+  - Cleanup method handles both Parquet and JSON checkpoint files
+- **Data-Locality Tracking** (Phase 1 foundation):
+  - New `DataLocationTracker` component in scheduler module
+  - Tracks which data items (by string key) are present on which workers
+  - Methods: `track_data()`, `locate_data()`, `locate_data_batch()`, `remove_data()`, `remove_worker()`
+  - Batch queries return worker affinity scores (count of matching data items)
+  - Foundation for Phase 2 locality-aware scheduling
+  - 9 comprehensive tests covering all tracker operations
+
+### Changed
+- Checkpoint feature now includes `arrow` and `parquet` dependencies
+- CheckpointManager writes Parquet format by default when `checkpoint` feature is enabled
+- Improved checkpoint storage efficiency with columnar format and compression
+- Scheduler module now includes HashSet for data location tracking
+
+### Technical Details
+- Parquet schema uses timestamp microseconds for precise temporal ordering
+- Single-row record batches per checkpoint for optimal small-file performance
+- Backward compatibility maintained: existing JSON checkpoints continue to work
+- DataLocationTracker uses Arc<RwLock<HashMap>> for thread-safe concurrent access
+- Worker IDs use UUIDs (per Iron Lotus Framework) to prevent invalidation on disconnects
+
 ## [1.0.0] - 2025-11-22
 
 ### Added
