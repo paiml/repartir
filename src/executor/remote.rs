@@ -275,6 +275,70 @@ impl Executor for RemoteExecutor {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::task::{Backend, Priority, Task};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    /// Creates a mock TCP server that echoes back a successful result
+    async fn start_mock_worker() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap().to_string();
+
+        tokio::spawn(async move {
+            // Handle multiple connections in a loop
+            loop {
+                if let Ok((mut stream, _)) = listener.accept().await {
+                    tokio::spawn(async move {
+                        // Handle multiple requests on the same connection
+                        loop {
+                            // Read task message
+                            let mut len_bytes = [0u8; 4];
+                            if stream.read_exact(&mut len_bytes).await.is_err() {
+                                return;
+                            }
+                            let len = u32::from_le_bytes(len_bytes) as usize;
+
+                            let mut buffer = vec![0u8; len];
+                            if stream.read_exact(&mut buffer).await.is_err() {
+                                return;
+                            }
+
+                            // Deserialize to get task ID
+                            if let Ok(RemoteMessage::SubmitTask(task)) =
+                                bincode::deserialize::<RemoteMessage>(&buffer)
+                            {
+                                // Send back a success result
+                                let result = ExecutionResult::new(
+                                    task.id(),
+                                    0,
+                                    b"test output".to_vec(),
+                                    Vec::new(),
+                                    std::time::Duration::from_millis(10),
+                                );
+
+                                let response = RemoteMessage::TaskResult(result);
+                                let encoded = bincode::serialize(&response).unwrap();
+
+                                // Send length and payload
+                                let response_len = u32::try_from(encoded.len()).unwrap();
+                                if stream.write_all(&response_len.to_le_bytes()).await.is_err() {
+                                    return;
+                                }
+                                if stream.write_all(&encoded).await.is_err() {
+                                    return;
+                                }
+                                if stream.flush().await.is_err() {
+                                    return;
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        addr
+    }
 
     #[tokio::test]
     async fn test_remote_executor_creation() {
@@ -300,5 +364,98 @@ mod tests {
 
         let result = executor.next_worker().await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_remote_executor_add_worker() {
+        let addr = start_mock_worker().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let executor = RemoteExecutor::new().await.unwrap();
+        let result = executor.add_worker(&addr).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_remote_executor_add_invalid_worker() {
+        let executor = RemoteExecutor::new().await.unwrap();
+        // Try to connect to invalid address
+        let result = executor.add_worker("127.0.0.1:1").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_remote_executor_execute_task() {
+        let addr = start_mock_worker().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let executor = RemoteExecutor::new().await.unwrap();
+        executor.add_worker(&addr).await.unwrap();
+
+        let task = Task::builder()
+            .binary("/bin/echo")
+            .arg("test")
+            .backend(Backend::Remote)
+            .priority(Priority::Normal)
+            .build()
+            .unwrap();
+
+        let result = executor.execute(task).await;
+        assert!(result.is_ok());
+
+        let exec_result = result.unwrap();
+        assert_eq!(exec_result.exit_code(), 0);
+        assert_eq!(exec_result.stdout_str().unwrap(), "test output");
+    }
+
+    #[tokio::test]
+    async fn test_remote_executor_round_robin() {
+        let addr1 = start_mock_worker().await;
+        let addr2 = start_mock_worker().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let executor = RemoteExecutor::new().await.unwrap();
+        executor.add_worker(&addr1).await.unwrap();
+        executor.add_worker(&addr2).await.unwrap();
+
+        // Execute multiple tasks to test round-robin
+        for _ in 0..4 {
+            let task = Task::builder()
+                .binary("/bin/echo")
+                .arg("test")
+                .backend(Backend::Remote)
+                .build()
+                .unwrap();
+
+            let result = executor.execute(task).await;
+            assert!(result.is_ok());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_remote_message_serialization() {
+        let task = Task::builder()
+            .binary("/bin/test")
+            .arg("arg1")
+            .backend(Backend::Remote)
+            .build()
+            .unwrap();
+
+        let message = RemoteMessage::SubmitTask(task.clone());
+        let encoded = bincode::serialize(&message).unwrap();
+        let decoded: RemoteMessage = bincode::deserialize(&encoded).unwrap();
+
+        if let RemoteMessage::SubmitTask(decoded_task) = decoded {
+            assert_eq!(decoded_task.id(), task.id());
+        } else {
+            panic!("Unexpected message type");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_remote_executor_capacity() {
+        let executor = RemoteExecutor::new().await.unwrap();
+        // Capacity is 0 for now (sync trait limitation)
+        assert_eq!(executor.capacity(), 0);
     }
 }

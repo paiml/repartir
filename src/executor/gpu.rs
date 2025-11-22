@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_units_estimation() {
+    fn test_compute_units_estimation_discrete() {
         use wgpu::{AdapterInfo, Backend, DeviceType};
 
         let info = AdapterInfo {
@@ -276,6 +276,78 @@ mod tests {
 
         let units = GpuExecutor::estimate_compute_units(&info);
         assert_eq!(units, 2048); // Discrete GPU estimate
+    }
+
+    #[test]
+    fn test_compute_units_estimation_integrated() {
+        use wgpu::{AdapterInfo, Backend, DeviceType};
+
+        let info = AdapterInfo {
+            name: "Integrated GPU".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: DeviceType::IntegratedGpu,
+            driver: String::new(),
+            driver_info: String::new(),
+            backend: Backend::Vulkan,
+        };
+
+        let units = GpuExecutor::estimate_compute_units(&info);
+        assert_eq!(units, 512); // Integrated GPU estimate
+    }
+
+    #[test]
+    fn test_compute_units_estimation_virtual() {
+        use wgpu::{AdapterInfo, Backend, DeviceType};
+
+        let info = AdapterInfo {
+            name: "Virtual GPU".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: DeviceType::VirtualGpu,
+            driver: String::new(),
+            driver_info: String::new(),
+            backend: Backend::Vulkan,
+        };
+
+        let units = GpuExecutor::estimate_compute_units(&info);
+        assert_eq!(units, 1024); // Virtual GPU estimate
+    }
+
+    #[test]
+    fn test_compute_units_estimation_cpu() {
+        use wgpu::{AdapterInfo, Backend, DeviceType};
+
+        let info = AdapterInfo {
+            name: "CPU Rasterizer".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: DeviceType::Cpu,
+            driver: String::new(),
+            driver_info: String::new(),
+            backend: Backend::Vulkan,
+        };
+
+        let units = GpuExecutor::estimate_compute_units(&info);
+        assert_eq!(units, 16); // CPU rasterizer estimate
+    }
+
+    #[test]
+    fn test_compute_units_estimation_other() {
+        use wgpu::{AdapterInfo, Backend, DeviceType};
+
+        let info = AdapterInfo {
+            name: "Unknown GPU".to_string(),
+            vendor: 0,
+            device: 0,
+            device_type: DeviceType::Other,
+            driver: String::new(),
+            driver_info: String::new(),
+            backend: Backend::Vulkan,
+        };
+
+        let units = GpuExecutor::estimate_compute_units(&info);
+        assert_eq!(units, 256); // Conservative estimate
     }
 
     #[tokio::test]
