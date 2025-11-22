@@ -15,12 +15,12 @@ documentation = "https://docs.rs/repartir"
 default = ["cpu"]
 cpu = ["tokio", "num_cpus"]
 # gpu = ["wgpu"]  # v1.1+
-remote = ["tokio", "bincode"]
+remote = ["tokio", "bincode", "tracing-subscriber"]
 full = ["cpu", "remote"]  # GPU in v1.1+
 
 [dependencies]
 # Core async runtime (industry standard, pure Rust)
-tokio = { version = "1.35", features = ["rt-multi-thread", "sync", "time", "process", "io-util", "macros"], optional = true }
+tokio = { version = "1.35", features = ["rt-multi-thread", "sync", "time", "process", "io-util", "macros", "net"], optional = true }
 
 # CPU backend
 num_cpus = { version = "1.16", optional = true }
@@ -41,6 +41,9 @@ tracing = "0.1"
 
 # UUIDs for stable IDs (per Iron Lotus case study)
 uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Logging (for binaries)
+tracing-subscriber = { version = "0.3", optional = true }
 
 [dev-dependencies]
 # Property-based testing (certeza Tier 2)
@@ -76,6 +79,9 @@ todo = "deny"
 # Allow some pedantic lints that conflict with idiomatic Rust
 module_name_repetitions = "allow"
 similar_names = "allow"
+
+# Allow multiple crate versions (transitive dependency issue)
+multiple_crate_versions = "allow"
 
 [profile.dev]
 # Fast incremental compilation for Tier 1 feedback

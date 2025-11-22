@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Scheduler benchmarks (Iron Lotus Framework: Performance validation)
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};

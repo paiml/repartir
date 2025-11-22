@@ -1,3 +1,4 @@
+#![allow(clippy::all, clippy::pedantic, clippy::nursery)]
 //! Hello Repartir Example
 //!
 //! Demonstrates basic usage of the repartir distributed computing library.
