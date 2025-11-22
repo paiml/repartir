@@ -147,7 +147,7 @@ async fn main() -> repartir::error::Result<()> {
         .binary("/usr/bin/process")
         .build()?;
 
-    scheduler.submit_with_affinity(
+    scheduler.submit_with_data_locality(
         task,
         &["dataset_A".to_string(), "dataset_B".to_string()]
     ).await?;
