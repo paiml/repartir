@@ -47,10 +47,9 @@ impl std::fmt::Display for TaskId {
 pub enum Backend {
     /// Execute on local CPU.
     Cpu,
-    // NOTE: GPU and Remote backends will be added in v1.1+
-    // /// Execute on GPU (requires `gpu` feature).
-    // #[cfg(feature = "gpu")]
-    // Gpu,
+    /// Execute on GPU (requires `gpu` feature).
+    #[cfg(feature = "gpu")]
+    Gpu,
     /// Execute on remote worker (requires `remote` feature).
     #[cfg(feature = "remote")]
     Remote,
