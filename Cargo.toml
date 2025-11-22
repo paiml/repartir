@@ -113,3 +113,11 @@ codegen-units = 1
 [[bench]]
 name = "scheduler_bench"
 harness = false
+
+[[bench]]
+name = "pool_bench"
+harness = false
+
+[[bin]]
+name = "repartir-worker"
+required-features = ["remote"]
