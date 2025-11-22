@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-11-22 (v2.0: Data Integration - Phase 1)
+
+### Added
+- **Parquet Checkpoint Storage**: Checkpoints now use Apache Parquet format for efficient columnar storage
+  - SNAPPY compression reduces checkpoint size by ~5-10x compared to JSON
+  - Backward compatible: supports reading both Parquet (.parquet) and JSON (.json) formats
+  - Schema: checkpoint_id, task_id, iteration, timestamp_micros, data (binary)
+- **Apache Arrow Integration**: Added arrow (v53.0) and parquet (v53.0) dependencies for checkpoint storage
+- **Enhanced Checkpoint Manager**:
+  - `write_parquet()` method for efficient checkpoint serialization
+  - `read_parquet()` method for checkpoint restoration
+  - Automatic format detection in `restore()` and `list_checkpoints()`
+  - Cleanup method handles both Parquet and JSON checkpoint files
+
+### Changed
+- Checkpoint feature now includes `arrow` and `parquet` dependencies
+- CheckpointManager writes Parquet format by default when `checkpoint` feature is enabled
+- Improved checkpoint storage efficiency with columnar format and compression
+
+### Technical Details
+- Parquet schema uses timestamp microseconds for precise temporal ordering
+- Single-row record batches per checkpoint for optimal small-file performance
+- Backward compatibility maintained: existing JSON checkpoints continue to work
+
 ## [1.0.0] - 2025-11-22
 
 ### Added
