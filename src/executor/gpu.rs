@@ -44,7 +44,7 @@ use crate::executor::{BoxFuture, Executor};
 use crate::task::{ExecutionResult, Task};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
-use wgpu::{Device, Instance, Queue};
+use wgpu::{util::DeviceExt, Device, Instance, Queue};
 
 /// GPU executor using wgpu for cross-platform compute.
 ///
@@ -189,32 +189,299 @@ impl GpuExecutor {
 
     /// Executes a compute shader on the GPU.
     ///
-    /// # Implementation Note (v1.1)
+    /// # Implementation
     ///
-    /// For v1.1, this is a placeholder that returns an error indicating
-    /// GPU compute shaders are not yet supported. Full implementation
-    /// requires:
-    /// - SPIR-V shader compilation
-    /// - Buffer management (upload/download)
-    /// - Pipeline setup and dispatch
+    /// This method:
+    /// 1. Validates the task has shader code
+    /// 2. Creates GPU buffers for inputs and outputs
+    /// 3. Uploads input data to GPU
+    /// 4. Creates compute pipeline with the shader
+    /// 5. Dispatches the compute workgroups
+    /// 6. Reads back output buffers from GPU
     ///
-    /// These will be implemented in v1.2 with rust-gpu integration.
-    #[allow(clippy::unused_async)]
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Task has no shader code (binary execution not supported on GPU)
+    /// - Shader module creation fails
+    /// - Buffer creation or mapping fails
+    /// - Pipeline creation fails
     async fn execute_compute(&self, task: Task) -> Result<ExecutionResult> {
         let task_id = task.id();
+        let start_time = std::time::Instant::now();
 
-        warn!(
-            "GPU compute not yet implemented for task {task_id}. \
-             Binary execution on GPU is not supported. \
-             Use CPU executor for binary tasks, or wait for v1.2 GPU compute."
+        // Check if task has shader code
+        let shader_code = task
+            .shader_code()
+            .ok_or_else(|| RepartirError::InvalidTask {
+                reason: format!(
+                    "GPU task {task_id} has no shader code. \
+                     Binary execution is not supported on GPU. \
+                     Use .shader_code() to provide WGSL shader source code."
+                ),
+            })?;
+
+        debug!(
+            "Task {task_id}: Creating shader module from {} bytes",
+            shader_code.len()
         );
 
-        Err(RepartirError::InvalidTask {
-            reason: "GPU executor v1.1 does not support task execution yet. \
-                     Binary tasks cannot run on GPU. \
-                     For GPU compute, use dedicated compute shaders (v1.2+)."
-                .to_string(),
+        // Convert shader code bytes to string (WGSL format)
+        let shader_source =
+            std::str::from_utf8(shader_code).map_err(|e| RepartirError::InvalidTask {
+                reason: format!("Shader code is not valid UTF-8 WGSL: {e}"),
+            })?;
+
+        // Create shader module from WGSL source
+        let shader_module = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(&format!("Task {task_id} Shader")),
+                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(shader_source)),
+            });
+
+        // Create input buffers and upload data
+        let input_buffers = self.create_input_buffers(&task);
+
+        // Create output buffers
+        let output_buffers = self.create_output_buffers(&task);
+
+        // Create bind group layout
+        let bind_group_layout =
+            self.create_bind_group_layout(input_buffers.len(), output_buffers.len());
+
+        // Create bind group
+        let bind_group =
+            self.create_bind_group(&bind_group_layout, &input_buffers, &output_buffers);
+
+        // Create compute pipeline
+        let pipeline_layout = self
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some(&format!("Task {task_id} Pipeline Layout")),
+                bind_group_layouts: &[&bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let compute_pipeline =
+            self.device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some(&format!("Task {task_id} Pipeline")),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: Some("main"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None,
+                });
+
+        // Create command encoder
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some(&format!("Task {task_id} Encoder")),
+            });
+
+        // Dispatch compute shader
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some(&format!("Task {task_id} Compute Pass")),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(&compute_pipeline);
+            compute_pass.set_bind_group(0, &bind_group, &[]);
+
+            // Get workgroup size (default to 1,1,1 if not specified)
+            let (x, y, z) = task.workgroup_size().unwrap_or((1, 1, 1));
+            debug!("Task {task_id}: Dispatching workgroups ({x}, {y}, {z})");
+            compute_pass.dispatch_workgroups(x, y, z);
+        }
+
+        // Submit commands
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Read back output buffers
+        let output_data = self.read_output_buffers(&output_buffers).await?;
+
+        let duration = start_time.elapsed();
+        info!(
+            "Task {task_id}: GPU execution completed in {:.2}ms",
+            duration.as_secs_f64() * 1000.0
+        );
+
+        Ok(ExecutionResult::new_gpu(
+            task_id,
+            0, // Success
+            output_data,
+            duration,
+        ))
+    }
+
+    /// Creates input buffers and uploads data to GPU.
+    fn create_input_buffers(&self, task: &Task) -> Vec<wgpu::Buffer> {
+        task.input_buffers()
+            .iter()
+            .enumerate()
+            .map(|(i, data)| {
+                self.device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(&format!("Task {} Input Buffer {i}", task.id())),
+                        contents: data,
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    })
+            })
+            .collect()
+    }
+
+    /// Creates output buffers on GPU.
+    fn create_output_buffers(&self, task: &Task) -> Vec<wgpu::Buffer> {
+        task.output_buffer_sizes()
+            .iter()
+            .enumerate()
+            .map(|(i, &size)| {
+                self.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some(&format!("Task {} Output Buffer {i}", task.id())),
+                    size,
+                    usage: wgpu::BufferUsages::STORAGE
+                        | wgpu::BufferUsages::COPY_SRC
+                        | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect()
+    }
+
+    /// Creates bind group layout for buffers.
+    #[allow(clippy::cast_possible_truncation)] // Buffer counts are always small
+    fn create_bind_group_layout(
+        &self,
+        input_count: usize,
+        output_count: usize,
+    ) -> wgpu::BindGroupLayout {
+        let mut entries = Vec::new();
+
+        // Input buffers (read-only storage)
+        for i in 0..input_count {
+            entries.push(wgpu::BindGroupLayoutEntry {
+                binding: i as u32,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            });
+        }
+
+        // Output buffers (read-write storage)
+        for i in 0..output_count {
+            entries.push(wgpu::BindGroupLayoutEntry {
+                binding: (input_count + i) as u32,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            });
+        }
+
+        self.device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Compute Bind Group Layout"),
+                entries: &entries,
+            })
+    }
+
+    /// Creates bind group binding buffers.
+    #[allow(clippy::cast_possible_truncation)] // Buffer counts are always small
+    fn create_bind_group(
+        &self,
+        layout: &wgpu::BindGroupLayout,
+        input_buffers: &[wgpu::Buffer],
+        output_buffers: &[wgpu::Buffer],
+    ) -> wgpu::BindGroup {
+        let mut entries = Vec::new();
+
+        // Bind input buffers
+        for (i, buffer) in input_buffers.iter().enumerate() {
+            entries.push(wgpu::BindGroupEntry {
+                binding: i as u32,
+                resource: buffer.as_entire_binding(),
+            });
+        }
+
+        // Bind output buffers
+        for (i, buffer) in output_buffers.iter().enumerate() {
+            entries.push(wgpu::BindGroupEntry {
+                binding: (input_buffers.len() + i) as u32,
+                resource: buffer.as_entire_binding(),
+            });
+        }
+
+        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Compute Bind Group"),
+            layout,
+            entries: &entries,
         })
+    }
+
+    /// Reads output buffers from GPU back to CPU.
+    async fn read_output_buffers(&self, buffers: &[wgpu::Buffer]) -> Result<Vec<Vec<u8>>> {
+        let mut output_data = Vec::new();
+
+        for buffer in buffers {
+            let size = buffer.size();
+
+            // Create staging buffer for readback
+            let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Staging Buffer"),
+                size,
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            // Copy from GPU buffer to staging buffer
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Readback Encoder"),
+                });
+            encoder.copy_buffer_to_buffer(buffer, 0, &staging_buffer, 0, size);
+            self.queue.submit(std::iter::once(encoder.finish()));
+
+            // Map staging buffer and read data
+            let (sender, receiver) = futures::channel::oneshot::channel();
+            staging_buffer
+                .slice(..)
+                .map_async(wgpu::MapMode::Read, move |result| {
+                    let _ = sender.send(result);
+                });
+
+            // Poll device until mapping completes
+            self.device.poll(wgpu::Maintain::Wait);
+
+            receiver
+                .await
+                .map_err(|_| RepartirError::InvalidTask {
+                    reason: "Failed to receive buffer mapping result".to_string(),
+                })?
+                .map_err(|e| RepartirError::InvalidTask {
+                    reason: format!("Failed to map output buffer: {e:?}"),
+                })?;
+
+            // Copy data from mapped buffer
+            let data = staging_buffer.slice(..).get_mapped_range();
+            output_data.push(data.to_vec());
+
+            // Unmap staging buffer
+            drop(data);
+            staging_buffer.unmap();
+        }
+
+        Ok(output_data)
     }
 }
 
