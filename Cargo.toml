@@ -14,10 +14,10 @@ documentation = "https://docs.rs/repartir"
 [features]
 default = ["cpu"]
 cpu = ["tokio", "num_cpus"]
-# gpu = ["wgpu"]  # v1.1+
+gpu = ["wgpu", "pollster"]
 remote = ["tokio", "bincode", "tracing-subscriber"]
 remote-tls = ["remote", "rustls", "tokio-rustls", "rustls-pemfile"]
-full = ["cpu", "remote", "remote-tls"]  # GPU in v1.1+
+full = ["cpu", "gpu", "remote", "remote-tls"]
 
 [dependencies]
 # Core async runtime (industry standard, pure Rust)
@@ -27,8 +27,9 @@ tokio = { version = "1.35", features = ["rt-multi-thread", "sync", "time", "proc
 num_cpus = { version = "1.16", optional = true }
 
 # GPU backend (pure Rust via gfx-rs)
-# NOTE: v1.0 focuses on CPU; GPU implementation in v1.1+
-# wgpu = { version = "0.20", optional = true }
+# wgpu provides cross-platform GPU compute (Vulkan/Metal/DX12/WebGPU)
+wgpu = { version = "23.0", optional = true }
+pollster = { version = "0.4", optional = true }  # Block on GPU async operations
 
 # Serialization (ubiquitous, zero-C)
 serde = { version = "1.0", features = ["derive"] }

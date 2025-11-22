@@ -5,6 +5,9 @@
 
 pub mod cpu;
 
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
 #[cfg(feature = "remote")]
 pub mod remote;
 
