@@ -67,10 +67,22 @@ pub enum RepartirError {
     #[cfg(feature = "remote")]
     #[error("Serialization error: {0}")]
     Serialization(String),
+
+    /// Tensor operation error (v2.0).
+    #[cfg(feature = "tensor")]
+    #[error("Tensor operation failed: {0}")]
+    Tensor(String),
     // NOTE: GPU backend errors will be added in v1.1+
     // #[cfg(feature = "gpu")]
     // #[error("GPU error: {0}")]
     // Gpu(String),
+}
+
+#[cfg(feature = "tensor")]
+impl From<trueno::TruenoError> for RepartirError {
+    fn from(err: trueno::TruenoError) -> Self {
+        RepartirError::Tensor(err.to_string())
+    }
 }
 
 #[cfg(test)]
