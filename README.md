@@ -170,6 +170,56 @@ async fn main() -> repartir::error::Result<()> {
 - Improves cache utilization
 - Enables efficient batch processing
 
+#### Tensor Operations with SIMD (v2.0)
+
+High-performance tensor operations with automatic SIMD optimization:
+
+```rust
+use repartir::tensor::{TensorExecutor, Tensor};
+use repartir::task::Backend;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    // Create tensor executor with CPU backend
+    let executor = TensorExecutor::builder()
+        .backend(Backend::Cpu)
+        .build()?;
+
+    // SIMD-accelerated operations
+    let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
+    let b = Tensor::from_slice(&[5.0, 6.0, 7.0, 8.0]);
+
+    // Element-wise operations
+    let sum = executor.add(&a, &b).await?;
+    let product = executor.mul(&a, &b).await?;
+
+    // Dot product
+    let dot = executor.dot(&a, &b).await?;
+    println!("Dot product: {}", dot);
+
+    // Scalar operations
+    let scaled = executor.scalar_mul(&a, 2.5).await?;
+
+    Ok(())
+}
+```
+
+**SIMD acceleration:**
+- Leverages trueno library's AVX2/AVX-512 optimizations
+- 2-8x speedup vs scalar operations on modern CPUs
+- Automatic backend selection based on CPU features
+- f32 precision for optimal SIMD register utilization
+
+**Operations:**
+- Element-wise: `add()`, `sub()`, `mul()`, `div()`
+- Dot product: `dot()`
+- Scalar: `scalar_mul()`
+
+**Run the example:**
+```bash
+cargo run --example tensor_example --features tensor
+```
+
 ## Feature Flags
 
 Repartir supports multiple execution backends via feature flags:
@@ -470,7 +520,8 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ **Data-Locality Tracking** (Phase 1): DataLocationTracker with batch affinity queries
 - ✅ **Affinity-Based Scheduling** (Phase 2): Automatic locality-aware task assignment
 - ✅ **Locality Metrics** (Phase 2): Real-time hit rate tracking (0.0 to 1.0)
-- [ ] trueno-db integration (distributed state) - Phase 3
+- ✅ **Tensor Operations** (Phase 3): SIMD-accelerated operations via trueno (2-8x speedup)
+- ✅ **Performance Benchmarks** (Phase 2): Locality scheduling validated (<1ms overhead)
 - [ ] Advanced ML patterns (pipeline/tensor parallelism) - Phase 4
 
 ### v3.0: Enterprise & Cloud

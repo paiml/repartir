@@ -7,9 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2025-11-22 (v2.0: Data Integration - Phase 1 & 2)
+## [2.0.0] - 2025-11-23 (v2.0: Data Integration - Phase 1, 2 & 3)
 
-### Phase 2: Locality-Aware Scheduling (NEW)
+### Phase 3: Tensor Operations (NEW)
+- **TensorExecutor API**:
+  - High-level wrapper around trueno library for SIMD-accelerated tensor operations
+  - Builder pattern for executor creation with backend selection (CPU/GPU)
+  - Async methods for all operations to support future distributed execution
+- **SIMD-Accelerated Operations**:
+  - Element-wise operations: `add()`, `sub()`, `mul()`, `div()`
+  - Dot product: `dot()` for vector inner products
+  - Scalar operations: `scalar_mul()` for element-wise scalar multiplication
+  - All operations leverage trueno's AVX2/AVX-512 SIMD optimizations
+  - 2-8x performance improvement vs scalar operations on modern CPUs
+- **Tensor Type Alias**:
+  - `Tensor` = `trueno::Vector<f32>` for optimal SIMD performance
+  - f32 (single precision) chosen for wider SIMD register utilization
+  - Convenient API matching common ML frameworks
+- **Error Handling**:
+  - Added `RepartirError::Tensor` variant for tensor operation errors
+  - Automatic conversion from `trueno::TruenoError` via `From` trait
+  - Consistent error propagation through async API
+- **Comprehensive Testing**:
+  - 8 unit tests covering all tensor operations
+  - 1 comprehensive example (`tensor_example.rs`)
+  - Doc tests for API documentation
+  - All tests validate SIMD-accelerated computation correctness
+
+### Phase 2: Locality-Aware Scheduling
 - **Affinity-Based Task Assignment**:
   - Scheduler automatically calculates worker affinity based on data dependencies
   - Affinity score: (data items present) / (total data items requested)

@@ -80,6 +80,8 @@ pub mod executor;
 pub mod messaging;
 pub mod scheduler;
 pub mod task;
+#[cfg(feature = "tensor")]
+pub mod tensor;
 
 use error::{RepartirError, Result};
 use executor::cpu::CpuExecutor;
