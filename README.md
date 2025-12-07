@@ -18,6 +18,18 @@
 - ✅ **Iron Lotus Quality**: ≥95% coverage target, ≥80% mutation score, formal verification
 - ✅ **Certeza Testing**: Three-tiered testing (sub-second → minutes → hours)
 
+## Installation
+
+```bash
+# From crates.io
+cargo add repartir
+
+# From source
+git clone https://github.com/paiml/repartir
+cd repartir
+cargo install --path .
+```
+
 ## Quick Start
 
 Add to your `Cargo.toml`:
