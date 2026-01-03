@@ -64,7 +64,7 @@ Built on the **Iron Lotus Framework**—a Toyota Way-derived engineering discipl
 #### Core Technical Principles
 
 1. **Pure Rust Everything (Sovereignty)**: Zero C FFI boundaries, leveraging Rust's safety and performance [1]
-   - **NSA/CISA Mandate**: Memory-safe languages reduce critical infrastructure vulnerabilities [8]
+   - **NSA/CISA Mandate**: Memory-safe languages reduce critical infrastructure vulnerabilities [11]
    - **Auditability**: Every line of execution visible from source to AST to binary
    - **No Binary Blobs**: Zero tolerance for opaque pre-compiled libraries
 
@@ -653,11 +653,11 @@ allow = ["MIT", "Apache-2.0", "BSD-3-Clause"]
 
 ### 11.3 The "Clean Slate" Justification
 
-**Peisert et al. (2012): "Turtles All the Way Down"** [13]
+**Peisert et al. (2012): "Turtles All the Way Down"** [10]
 - **Thesis**: Security cannot be retrofitted; it must be designed from the foundation up
 - **Application**: Wrapping PyTorch in Rust FFI bindings does NOT achieve sovereignty
   - The unsafety is merely pushed down one layer (still executing C++ kernels)
-  - FFI boundary itself is a source of undefined behavior [20]
+  - FFI boundary itself is a source of undefined behavior [13]
 
 **Repartir's Clean Slate:**
 - **No Compromise**: Reject "good enough" hybrid solutions (Rust API + C++ compute)
@@ -1306,39 +1306,46 @@ fn chaos_test_scheduler_under_memory_pressure() {
 
 This specification is grounded in peer-reviewed research:
 
-**[1] Rust Safety and Performance:**
+**[1] Rust Safety and Formal Verification:**
 Jung, R., Jourdan, J., Krebbers, R., & Dreyer, D. (2017). "RustBelt: Securing the Foundations of the Rust Programming Language." *Proceedings of the ACM on Programming Languages*, 2(POPL), 1-34. https://doi.org/10.1145/3158154
 
 **[2] Message-Oriented Middleware:**
-Hintjens, P. (2013). "ZeroMQ: Messaging for Many Applications." *O'Reilly Media*. (Industry reference, widely cited in distributed systems research)
+Hintjens, P. (2013). "ZeroMQ: Messaging for Many Applications." *O'Reilly Media*.
 
-Eugster, P. T., Felber, P. A., Guerraoui, R., & Kermarrec, A. M. (2003). "The Many Faces of Publish/Subscribe." *ACM Computing Surveys*, 35(2), 114-131. https://doi.org/10.1145/857076.857078
+Eugster, P. T., Felber, P. A., Guerraoui, R., & Kermarrec, A. M. (2003). "The Many Faces of Publish/Subscribe." *ACM Computing Surveys*, 35(2), 114-131.
 
 **[3] Work-Stealing Schedulers:**
-Blumofe, R. D., & Leiserson, C. E. (1999). "Scheduling Multithreaded Computations by Work Stealing." *Journal of the ACM*, 46(5), 720-748. https://doi.org/10.1145/324133.324234
+Blumofe, R. D., & Leiserson, C. E. (1999). "Scheduling Multithreaded Computations by Work Stealing." *Journal of the ACM*, 46(5), 720-748.
 
-Chase, D., & Lev, Y. (2005). "Dynamic Circular Work-Stealing Deque." *Proceedings of the 17th Annual ACM Symposium on Parallelism in Algorithms and Architectures*, 21-28. https://doi.org/10.1145/1073970.1073974
+**[4] Fault Tolerance:**
+Chandra, T. D., & Toueg, S. (1996). "Unreliable Failure Detectors for Reliable Distributed Systems." *Journal of the ACM*, 43(2), 225-267.
 
-**[4] Fault Tolerance in Distributed Systems:**
-Chandra, T. D., & Toueg, S. (1996). "Unreliable Failure Detectors for Reliable Distributed Systems." *Journal of the ACM*, 43(2), 225-267. https://doi.org/10.1145/226643.226647
+**[5] GPU Computing:**
+Nickolls, J., et al. (2008). "Scalable Parallel Programming with CUDA." *Queue*, 6(2).
 
-Alvisi, L., & Marzullo, K. (1998). "Message Logging: Pessimistic, Optimistic, Causal, and Optimal." *IEEE Transactions on Software Engineering*, 24(2), 149-159. https://doi.org/10.1109/32.666828
-
-**[5] GPU Computing and GPGPU:**
-Nickolls, J., Buck, I., Garland, M., & Skadron, K. (2008). "Scalable Parallel Programming with CUDA." *Queue*, 6(2), 40-53. https://doi.org/10.1145/1365490.1365500
-
-Stratton, J. A., Rodrigues, C., Sung, I. J., Obeid, N., Chang, L. W., Anssari, N., ... & Hwu, W. M. W. (2012). "Parboil: A Revised Benchmark Suite for Scientific and Commercial Throughput Computing." *Center for Reliable and High-Performance Computing*, 127.
-
-**[6] Distributed Task Scheduling:**
-Isard, M., Budiu, M., Yu, Y., Birrell, A., & Fetterly, D. (2007). "Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks." *Proceedings of the 2nd ACM SIGOPS/EuroSys European Conference on Computer Systems*, 59-72. https://doi.org/10.1145/1272996.1273005
+**[6] Distributed Scheduling:**
+Isard, M., et al. (2007). "Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks." *EuroSys*.
 
 **[7] Distributed Machine Learning:**
-Sergeev, A., & Del Balso, M. (2018). "Horovod: Fast and Easy Distributed Deep Learning in TensorFlow." *arXiv preprint arXiv:1802.05799*. https://arxiv.org/abs/1802.05799
-
-Dean, J., Corrado, G., Monga, R., Chen, K., Devin, M., Mao, M., ... & Ng, A. Y. (2012). "Large Scale Distributed Deep Networks." *Advances in Neural Information Processing Systems*, 25, 1223-1231.
+Sergeev, A., & Del Balso, M. (2018). "Horovod: Fast and Easy Distributed Deep Learning in TensorFlow." *arXiv:1802.05799*.
 
 **[8] Heterogeneous Computing:**
-Mittal, S., & Vetter, J. S. (2015). "A Survey of CPU-GPU Heterogeneous Computing Techniques." *ACM Computing Surveys*, 47(4), 1-35. https://doi.org/10.1145/2788396
+Mittal, S., & Vetter, J. S. (2015). "A Survey of CPU-GPU Heterogeneous Computing Techniques." *ACM Computing Surveys*.
+
+**[9] Supply Chain Security:**
+Gu, T., Dolan-Gavitt, B., & Garg, S. (2017). "BadNets: Identifying Vulnerabilities in the Machine Learning Model Supply Chain." *IEEE Access*.
+
+**[10] Clean-Slate Security:**
+Peisert, S., et al. (2012). "Turtles All the Way Down: A Clean-Slate Architecture for Secure Computing." *IEEE Security & Privacy*.
+
+**[11] Memory Safety & Sovereignty:**
+NSA/CISA. (2023). "The Case for Memory Safe Roadmaps." *Cybersecurity Information Sheet*.
+
+**[12] Energy Efficiency & Performance:**
+Pereira, R., et al. (2017). "Energy Efficiency across Programming Languages." *SLE '17*.
+
+**[13] FFI Risks:**
+Matsakis, N., & Klock, F. S. (2014). "The Rust Language." *ACM SIGAda Ada Letters*.
 
 ## 13. Non-Goals (v1)
 
@@ -1409,6 +1416,38 @@ See section 12 for full citation list. Additional references:
 - Regulatory compliance (GDPR, data sovereignty laws)
 - Academic research with reproducible, auditable infrastructure
 
+## Appendix C: Documentation Integration Strategy
+
+**Objective**: Ensure documentation (Genchi Genbutsu) never drifts from reality (Code).
+
+**The Drift Problem**:
+Traditional documentation rots because it is separate from code. Examples in markdown files become syntax-invalid or API-incompatible as the codebase evolves.
+
+**The Solution: Living Documentation**:
+We use `mdbook` with the `{{#include ...}}` directive to source all code examples directly from compiled, tested Rust files.
+
+**Protocol**:
+1. **Write Example as Test**: Create a file in `examples/` or `tests/` (e.g., `examples/scheduler_demo.rs`).
+2. **Verify it Runs**: Ensure it passes `cargo run --example scheduler_demo`.
+3. **Include in Docs**: In `book/src/scheduler.md`, use:
+   ```markdown
+   ## Scheduler Usage
+   
+   Here is a verified example:
+   ```rust
+   {{#include ../../examples/scheduler_demo.rs:10:25}}
+   ```
+   ```
+4. **CI Enforcement**:
+   - `mdbook test` verifies links.
+   - `cargo test --examples` verifies the source code.
+
+**Outcome**:
+- If the API changes, the example code breaks (compilation error).
+- We fix the example code.
+- The documentation updates automatically.
+- Zero chance of stale code snippets in docs.
+
 ## Conclusion: The Path to Digital Sovereignty
 
 ### The Strategic Imperative
@@ -1443,13 +1482,13 @@ By targeting **95% line coverage and 80% mutation score**, we approach asymptoti
 
 The decision to mandate **100% Rust, zero C/C++** is not ideological purity—it is strategic necessity:
 
-1. **Memory Safety = National Security**: The NSA/CISA joint guidance is unambiguous: memory-unsafe languages are the primary vector for critical vulnerabilities [8]. A sovereign stack cannot be built on a foundation of undefined behavior.
+1. **Memory Safety = National Security**: The NSA/CISA joint guidance is unambiguous: memory-unsafe languages are the primary vector for critical vulnerabilities [11]. A sovereign stack cannot be built on a foundation of undefined behavior.
 
-2. **RustBelt Formal Verification**: Unlike C++, Rust's safety guarantees are mathematically proven [18]. This is not marketing; it is peer-reviewed computer science.
+2. **RustBelt Formal Verification**: Unlike C++, Rust's safety guarantees are mathematically proven [1]. This is not marketing; it is peer-reviewed computer science.
 
 3. **Supply Chain Resilience**: Every C++ dependency is a potential attack vector. The 2024 XZ Utils backdoor demonstrated that even mature, widely-audited projects are vulnerable. Pure Rust eliminates the FFI attack surface entirely.
 
-4. **Performance Parity**: Empirical research shows Rust matches or exceeds C++ in both speed and energy efficiency [24]. The performance argument for C++ is a myth.
+4. **Performance Parity**: Empirical research shows Rust matches or exceeds C++ in both speed and energy efficiency [12]. The performance argument for C++ is a myth.
 
 ### The Cost of Sovereignty
 
@@ -1477,7 +1516,7 @@ This specification is a blueprint, not a product. Realizing the vision of repart
 
 ### Final Reflection: Turtles All the Way Down
 
-Peisert et al. titled their clean-slate security paper "Turtles All the Way Down" [13]—a reference to the infinite regress problem in epistemology. In the context of Sovereign AI, the metaphor is apt: if the foundation is insecure, no amount of hardening at higher layers matters.
+Peisert et al. titled their clean-slate security paper "Turtles All the Way Down" [10]—a reference to the infinite regress problem in epistemology. In the context of Sovereign AI, the metaphor is apt: if the foundation is insecure, no amount of hardening at higher layers matters.
 
 **Repartir is our turtle**: a solid, auditable, memory-safe foundation for distributed AI. Built on Rust's provable safety guarantees, disciplined by the Toyota Way, and validated by certeza's exhaustive testing, it represents a genuine alternative to the black-box status quo.
 

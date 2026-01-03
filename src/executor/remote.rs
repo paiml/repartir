@@ -279,8 +279,8 @@ mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
-    /// Creates a mock TCP server that echoes back a successful result
-    async fn start_mock_worker() -> String {
+    /// Creates a test TCP server that echoes back a successful result.
+    async fn start_test_worker() -> String {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap().to_string();
 
@@ -368,7 +368,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_remote_executor_add_worker() {
-        let addr = start_mock_worker().await;
+        let addr = start_test_worker().await;
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         let executor = RemoteExecutor::new().await.unwrap();
@@ -386,7 +386,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_remote_executor_execute_task() {
-        let addr = start_mock_worker().await;
+        let addr = start_test_worker().await;
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         let executor = RemoteExecutor::new().await.unwrap();
@@ -410,8 +410,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_remote_executor_round_robin() {
-        let addr1 = start_mock_worker().await;
-        let addr2 = start_mock_worker().await;
+        let addr1 = start_test_worker().await;
+        let addr2 = start_test_worker().await;
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         let executor = RemoteExecutor::new().await.unwrap();

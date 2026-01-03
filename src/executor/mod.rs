@@ -61,8 +61,33 @@ pub trait Executor: Send + Sync {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::executor::cpu::CpuExecutor;
 
-    // Test that Executor trait is object-safe (can be used with dyn)
-    #[allow(dead_code)]
-    fn _assert_object_safe(_executor: &dyn Executor) {}
+    /// Tests that the Executor trait is object-safe (can be used with dyn).
+    #[test]
+    fn test_executor_trait_object_safe() {
+        let executor = CpuExecutor::new();
+        let _dyn_executor: &dyn Executor = &executor;
+        assert!(executor.capacity() > 0);
+    }
+
+    /// Tests that BoxFuture type alias works correctly.
+    #[test]
+    fn test_box_future_type_alias() {
+        fn create_box_future<'a>() -> BoxFuture<'a, i32> {
+            Box::pin(async { 42 })
+        }
+
+        let future = create_box_future();
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let result = runtime.block_on(future);
+        assert_eq!(result, 42);
+    }
+
+    /// Tests executor name method.
+    #[test]
+    fn test_executor_name() {
+        let executor = CpuExecutor::new();
+        assert_eq!(executor.name(), "CPU");
+    }
 }

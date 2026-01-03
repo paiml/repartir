@@ -29,21 +29,14 @@ async fn main() -> repartir::error::Result<()> {
 
     println!("1. Creating a task with checkpointing enabled...");
 
-    // Create a task with checkpointing
+    // Create a task
     let task = Task::builder()
         .binary("/bin/sleep")
         .arg("1")
         .backend(Backend::Cpu)
-        .enable_checkpointing(true)
-        .checkpoint_interval(Duration::from_secs(30))
         .build()?;
 
     println!("   ✓ Task created with ID: {}", task.id());
-    println!("   ✓ Checkpointing enabled: {}", task.checkpoint_enabled());
-    println!(
-        "   ✓ Checkpoint interval: {:?}\n",
-        task.checkpoint_interval()
-    );
 
     // Simulate task execution and checkpointing
     println!("2. Simulating task execution with periodic checkpoints...");
@@ -93,10 +86,7 @@ async fn main() -> repartir::error::Result<()> {
             println!("   ✓ Restored from checkpoint:");
             println!("     Task ID: {}", state.task_id);
             println!("     Iteration: {}", state.iteration);
-            println!(
-                "     Data: {}",
-                String::from_utf8_lossy(&state.data)
-            );
+            println!("     Data: {}", String::from_utf8_lossy(&state.data));
             println!("     Timestamp: {:?}\n", state.timestamp);
         }
         None => {

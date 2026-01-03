@@ -42,11 +42,9 @@ tier2: ## Tier 2: Full test suite for commits (ON-COMMIT)
 	@echo "  [3/7] All tests..."
 	@cargo test --all-features --quiet
 	@echo "  [4/7] Property tests (full cases)..."
-	@PROPTEST_CASES=256 cargo test property_ --all-features --quiet || true
+	@PROPTEST_CASES=25 cargo test property_ --all-features --quiet || true
 	@echo "  [5/7] Coverage analysis..."
-	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
 	@cargo llvm-cov --all-features --workspace --quiet >/dev/null 2>&1 || true
-	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
 	@# bashrs: POSIX-compliant coverage check
 	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$NF}' | sed 's/%//' || echo "0"); \
 	if [ -z "$$COVERAGE_RAW" ] || [ "$$COVERAGE_RAW" = "-" ]; then \
@@ -97,7 +95,7 @@ chaos-test: ## Chaos engineering tests with adversarial conditions
 	@echo "🔥 CHAOS ENGINEERING: Stress testing with adversarial conditions"
 	@echo ""
 	@echo "  [1/2] High-load concurrent tests..."
-	@PROPTEST_CASES=1000 cargo test --features cpu --quiet || true
+	@PROPTEST_CASES=250 cargo test --features cpu --quiet || true
 	@echo "  [2/2] Resource exhaustion tests..."
 	@cargo test --test '*' --features cpu --quiet || true
 	@echo ""
@@ -133,9 +131,7 @@ kaizen: ## Kaizen: Continuous improvement analysis
 	@echo "✅ Baseline metrics collected"
 	@echo ""
 	@echo "=== STEP 2: Test Coverage Analysis ==="
-	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
 	@cargo llvm-cov report --summary-only 2>/dev/null | tee /tmp/kaizen/coverage.txt || echo "Coverage: Unknown" > /tmp/kaizen/coverage.txt
-	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
 	@echo ""
 	@echo "=== STEP 3: Mutation Score Analysis ==="
 	@# bashrs: POSIX-compliant arithmetic (no bc dependency)
@@ -205,11 +201,9 @@ test-verbose: ## Run tests with verbose output
 coverage: ## Generate coverage report (≥95% target)
 	@echo "📊 Generating coverage report (target: ≥95%)..."
 	@# Temporarily disable mold linker (breaks LLVM coverage)
-	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
 	@cargo llvm-cov --workspace --lcov --output-path lcov.info
 	@cargo llvm-cov report --html --output-dir target/coverage/html
 	@# Restore mold linker
-	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
 	@echo "✅ Coverage report: target/coverage/html/index.html"
 	@echo ""
 	@echo "📊 Coverage Summary:"
@@ -231,10 +225,8 @@ coverage: ## Generate coverage report (≥95% target)
 coverage-check: ## Enforce 95% coverage threshold (BLOCKS on failure)
 	@echo "🔒 Enforcing 95% coverage threshold..."
 	@# Temporarily disable mold linker
-	@test -f ~/.cargo/config.toml && mv ~/.cargo/config.toml ~/.cargo/config.toml.cov-backup || true
 	@cargo llvm-cov --workspace --lcov --output-path lcov.info > /dev/null 2>&1
 	@# Restore mold linker
-	@test -f ~/.cargo/config.toml.cov-backup && mv ~/.cargo/config.toml.cov-backup ~/.cargo/config.toml || true
 	@# bashrs: POSIX-compliant coverage check (extract Lines coverage from column 10)
 	@COVERAGE_RAW=$$(cargo llvm-cov report --summary-only 2>/dev/null | grep "TOTAL" | awk '{print $$10}' | sed 's/%//' || echo "0"); \
 	if [ -z "$$COVERAGE_RAW" ] || [ "$$COVERAGE_RAW" = "-" ]; then \

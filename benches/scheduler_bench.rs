@@ -211,9 +211,7 @@ fn bench_submit_comparison(c: &mut Criterion) {
                     .build()
                     .unwrap();
 
-                let data_keys: Vec<String> = (0..10)
-                    .map(|i| format!("dataset_{}", i))
-                    .collect();
+                let data_keys: Vec<String> = (0..10).map(|i| format!("dataset_{}", i)).collect();
 
                 scheduler
                     .submit_with_data_locality(black_box(task), black_box(&data_keys))

@@ -819,10 +819,7 @@ mod tests {
     #[cfg(feature = "checkpoint")]
     #[test]
     fn test_checkpoint_disabled_by_default() {
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .build()
-            .unwrap();
+        let task = Task::builder().binary("/bin/echo").build().unwrap();
 
         assert!(!task.checkpoint_enabled());
         assert_eq!(task.checkpoint_interval(), None);
