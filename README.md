@@ -1,3 +1,5 @@
+<div align="center">
+
 # Repartir: Sovereign AI-Grade Distributed Computing
 
 [![CI](https://img.shields.io/badge/CI-Jidoka%20Gates-green)](.github/workflows/jidoka-gates.yml)
@@ -5,7 +7,27 @@
 [![Rust](https://img.shields.io/badge/rust-100%25-orange.svg)](https://www.rust-lang.org/)
 [![Zero C/C++](https://img.shields.io/badge/C%2FC%2B%2B-0%25-blue.svg)](#)
 
+</div>
+
 **Repartir** is a pure Rust library for distributed execution across CPUs, GPUs, and remote machines. Built on the **Iron Lotus Framework** (Toyota Way principles for systems programming) and validated by the **certeza** testing methodology.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Feature Flags](#feature-flags)
+- [Architecture](#architecture)
+- [Iron Lotus Framework](#iron-lotus-framework)
+- [Testing (Certeza Methodology)](#testing-certeza-methodology)
+- [Sovereign AI Principles](#sovereign-ai-principles)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Documentation](#documentation)
+- [Academic Foundations](#academic-foundations)
+- [Comparison with Existing Systems](#comparison-with-existing-systems)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ## Features
 

@@ -1,4 +1,5 @@
 //! Checkpoint management for persistent task state.
+#![allow(clippy::missing_errors_doc, clippy::unused_async)]
 //!
 //! This module provides checkpointing capabilities for long-running tasks,
 //! enabling restart from the last checkpoint on failure.
@@ -46,9 +47,9 @@ use arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 #[cfg(feature = "checkpoint")]
 use arrow::record_batch::RecordBatch;
 #[cfg(feature = "checkpoint")]
-use parquet::arrow::arrow_writer::ArrowWriter;
-#[cfg(feature = "checkpoint")]
 use parquet::arrow::arrow_reader::ArrowReaderBuilder;
+#[cfg(feature = "checkpoint")]
+use parquet::arrow::arrow_writer::ArrowWriter;
 #[cfg(feature = "checkpoint")]
 use parquet::file::properties::WriterProperties;
 #[cfg(feature = "checkpoint")]
@@ -106,10 +107,8 @@ impl CheckpointManager {
     /// Returns error if directory cannot be created
     pub fn new(checkpoint_dir: PathBuf) -> Result<Self> {
         // Create checkpoint directory if it doesn't exist
-        std::fs::create_dir_all(&checkpoint_dir).map_err(|e| {
-            RepartirError::InvalidTask {
-                reason: format!("Failed to create checkpoint directory: {}", e),
-            }
+        std::fs::create_dir_all(&checkpoint_dir).map_err(|e| RepartirError::InvalidTask {
+            reason: format!("Failed to create checkpoint directory: {e}"),
         })?;
 
         Ok(Self {
@@ -163,7 +162,11 @@ impl CheckpointManager {
             Field::new("checkpoint_id", DataType::Utf8, false),
             Field::new("task_id", DataType::Utf8, false),
             Field::new("iteration", DataType::UInt64, false),
-            Field::new("timestamp_micros", DataType::Timestamp(TimeUnit::Microsecond, None), false),
+            Field::new(
+                "timestamp_micros",
+                DataType::Timestamp(TimeUnit::Microsecond, None),
+                false,
+            ),
             Field::new("data", DataType::Binary, false),
         ]));
 
@@ -213,9 +216,11 @@ impl CheckpointManager {
             }
         })?;
 
-        writer.write(&batch).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to write parquet batch: {}", e),
-        })?;
+        writer
+            .write(&batch)
+            .map_err(|e| RepartirError::InvalidTask {
+                reason: format!("Failed to write parquet batch: {}", e),
+            })?;
 
         writer.close().map_err(|e| RepartirError::InvalidTask {
             reason: format!("Failed to close parquet writer: {}", e),
@@ -231,20 +236,18 @@ impl CheckpointManager {
 
         // Serialize state to JSON
         let serialized = serde_json::to_vec(&state).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to serialize checkpoint: {}", e),
+            reason: format!("Failed to serialize checkpoint: {e}"),
         })?;
 
         // Write to file
         let task_dir = self.checkpoint_dir.join(task_id.to_string());
         std::fs::create_dir_all(&task_dir).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to create task checkpoint directory: {}", e),
+            reason: format!("Failed to create task checkpoint directory: {e}"),
         })?;
 
-        let checkpoint_path = task_dir.join(format!("{}.json", checkpoint_id));
-        std::fs::write(&checkpoint_path, &serialized).map_err(|e| {
-            RepartirError::InvalidTask {
-                reason: format!("Failed to write checkpoint: {}", e),
-            }
+        let checkpoint_path = task_dir.join(format!("{checkpoint_id}.json"));
+        std::fs::write(&checkpoint_path, &serialized).map_err(|e| RepartirError::InvalidTask {
+            reason: format!("Failed to write checkpoint: {e}"),
         })?;
 
         Ok(checkpoint_id)
@@ -274,13 +277,13 @@ impl CheckpointManager {
         // Find most recent checkpoint (prefer Parquet, fall back to JSON)
         let mut checkpoints: Vec<_> = std::fs::read_dir(&task_dir)
             .map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to read checkpoint directory: {}", e),
+                reason: format!("Failed to read checkpoint directory: {e}"),
             })?
-            .filter_map(|entry| entry.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|entry| {
                 let path = entry.path();
                 path.extension()
-                    .map_or(false, |ext| ext == "parquet" || ext == "json")
+                    .is_some_and(|ext| ext == "parquet" || ext == "json")
             })
             .collect();
 
@@ -289,7 +292,7 @@ impl CheckpointManager {
         }
 
         // Sort by filename (checkpoint ID)
-        checkpoints.sort_by_key(|e| e.path());
+        checkpoints.sort_by_key(std::fs::DirEntry::path);
 
         // Read most recent checkpoint
         let latest = checkpoints
@@ -311,14 +314,13 @@ impl CheckpointManager {
             #[cfg(feature = "checkpoint")]
             "parquet" => self.read_parquet(&latest_path),
             "json" => {
-                let data =
-                    std::fs::read(&latest_path).map_err(|e| RepartirError::InvalidTask {
-                        reason: format!("Failed to read checkpoint: {}", e),
-                    })?;
+                let data = std::fs::read(&latest_path).map_err(|e| RepartirError::InvalidTask {
+                    reason: format!("Failed to read checkpoint: {e}"),
+                })?;
 
                 let state =
                     serde_json::from_slice(&data).map_err(|e| RepartirError::InvalidTask {
-                        reason: format!("Failed to deserialize checkpoint: {}", e),
+                        reason: format!("Failed to deserialize checkpoint: {e}"),
                     })?;
 
                 Ok(Some(state))
@@ -328,7 +330,7 @@ impl CheckpointManager {
                 reason: "Parquet checkpoints require 'checkpoint' feature".to_string(),
             }),
             _ => Err(RepartirError::InvalidTask {
-                reason: format!("Unsupported checkpoint format: {}", extension),
+                reason: format!("Unsupported checkpoint format: {extension}"),
             }),
         }
     }
@@ -340,9 +342,10 @@ impl CheckpointManager {
             reason: format!("Failed to open parquet file: {}", e),
         })?;
 
-        let builder = ArrowReaderBuilder::try_new(file).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to create parquet reader: {}", e),
-        })?;
+        let builder =
+            ArrowReaderBuilder::try_new(file).map_err(|e| RepartirError::InvalidTask {
+                reason: format!("Failed to create parquet reader: {}", e),
+            })?;
 
         let mut reader = builder.build().map_err(|e| RepartirError::InvalidTask {
             reason: format!("Failed to build parquet reader: {}", e),
@@ -392,17 +395,16 @@ impl CheckpointManager {
             })?;
 
         // Convert to TaskState
-        let task_id = Uuid::parse_str(task_id_array.value(0)).map_err(|e| {
-            RepartirError::InvalidTask {
+        let task_id =
+            Uuid::parse_str(task_id_array.value(0)).map_err(|e| RepartirError::InvalidTask {
                 reason: format!("Failed to parse task_id: {}", e),
-            }
-        })?;
+            })?;
 
         let iteration = iteration_array.value(0);
 
         let timestamp_micros = timestamp_array.value(0);
-        let timestamp = SystemTime::UNIX_EPOCH
-            + std::time::Duration::from_micros(timestamp_micros as u64);
+        let timestamp =
+            SystemTime::UNIX_EPOCH + std::time::Duration::from_micros(timestamp_micros as u64);
 
         let data = data_array.value(0).to_vec();
 
@@ -437,10 +439,10 @@ impl CheckpointManager {
         let mut metadata = Vec::new();
 
         for entry in std::fs::read_dir(&task_dir).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to read checkpoint directory: {}", e),
+            reason: format!("Failed to read checkpoint directory: {e}"),
         })? {
             let entry = entry.map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to read directory entry: {}", e),
+                reason: format!("Failed to read directory entry: {e}"),
             })?;
 
             let path = entry.path();
@@ -475,12 +477,12 @@ impl CheckpointManager {
                 Some("json") => {
                     // Read JSON metadata
                     let data = std::fs::read(&path).map_err(|e| RepartirError::InvalidTask {
-                        reason: format!("Failed to read checkpoint: {}", e),
+                        reason: format!("Failed to read checkpoint: {e}"),
                     })?;
 
                     let state: TaskState =
                         serde_json::from_slice(&data).map_err(|e| RepartirError::InvalidTask {
-                            reason: format!("Failed to deserialize checkpoint: {}", e),
+                            reason: format!("Failed to deserialize checkpoint: {e}"),
                         })?;
 
                     metadata.push(CheckpointMetadata {
@@ -515,7 +517,8 @@ impl CheckpointManager {
     ///
     /// Returns error if checkpoints cannot be deleted
     pub async fn cleanup(&self, retention_days: u32) -> Result<usize> {
-        let retention_duration = std::time::Duration::from_secs(retention_days as u64 * 24 * 3600);
+        let retention_duration =
+            std::time::Duration::from_secs(u64::from(retention_days) * 24 * 3600);
         let cutoff_time = SystemTime::now()
             .checked_sub(retention_duration)
             .ok_or_else(|| RepartirError::InvalidTask {
@@ -525,13 +528,13 @@ impl CheckpointManager {
         let mut deleted_count = 0;
 
         // Iterate over all task directories
-        for entry in std::fs::read_dir(&self.checkpoint_dir).map_err(|e| {
-            RepartirError::InvalidTask {
-                reason: format!("Failed to read checkpoint directory: {}", e),
-            }
-        })? {
+        for entry in
+            std::fs::read_dir(&self.checkpoint_dir).map_err(|e| RepartirError::InvalidTask {
+                reason: format!("Failed to read checkpoint directory: {e}"),
+            })?
+        {
             let entry = entry.map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to read directory entry: {}", e),
+                reason: format!("Failed to read directory entry: {e}"),
             })?;
 
             if entry.path().is_dir() {
@@ -544,21 +547,23 @@ impl CheckpointManager {
                             // Delete old checkpoint (try both .parquet and .json)
                             let task_path = self.checkpoint_dir.join(task_id.to_string());
 
-                            let parquet_path = task_path.join(format!("{}.parquet", checkpoint.checkpoint_id));
-                            let json_path = task_path.join(format!("{}.json", checkpoint.checkpoint_id));
+                            let parquet_path =
+                                task_path.join(format!("{}.parquet", checkpoint.checkpoint_id));
+                            let json_path =
+                                task_path.join(format!("{}.json", checkpoint.checkpoint_id));
 
                             // Try to delete parquet first, fall back to json
                             let deleted = if parquet_path.exists() {
                                 std::fs::remove_file(&parquet_path).map_err(|e| {
                                     RepartirError::InvalidTask {
-                                        reason: format!("Failed to delete parquet checkpoint: {}", e),
+                                        reason: format!("Failed to delete parquet checkpoint: {e}"),
                                     }
                                 })?;
                                 true
                             } else if json_path.exists() {
                                 std::fs::remove_file(&json_path).map_err(|e| {
                                     RepartirError::InvalidTask {
-                                        reason: format!("Failed to delete json checkpoint: {}", e),
+                                        reason: format!("Failed to delete json checkpoint: {e}"),
                                     }
                                 })?;
                                 true

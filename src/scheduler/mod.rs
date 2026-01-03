@@ -1,6 +1,7 @@
 //! Task scheduling and work distribution.
 //!
 //! Implements work-stealing scheduler based on Blumofe & Leiserson (1999).
+#![allow(clippy::cast_precision_loss, clippy::significant_drop_tightening)]
 
 use crate::error::{RepartirError, Result};
 use crate::task::{ExecutionResult, Task, TaskId};
@@ -100,7 +101,7 @@ pub struct Scheduler {
     results: Arc<RwLock<HashMap<TaskId, ExecutionResult>>>,
     /// Data location tracker for locality-aware scheduling (v2.0).
     data_tracker: DataLocationTracker,
-    /// Locality metrics (v2.0): tasks_with_locality / total_tasks.
+    /// Locality metrics (v2.0): `tasks_with_locality` / `total_tasks`.
     locality_metrics: Arc<RwLock<LocalityMetrics>>,
 }
 
@@ -184,7 +185,7 @@ impl Scheduler {
 
     /// Calculates affinity scores for workers based on data dependencies.
     ///
-    /// Returns a map of worker_id -> affinity score (0.0 to 1.0).
+    /// Returns a map of `worker_id` -> affinity score (0.0 to 1.0).
     /// Score = (data items present on worker) / (total data items requested)
     ///
     /// # Arguments
@@ -213,7 +214,7 @@ impl Scheduler {
     /// # Arguments
     ///
     /// * `task` - Task to schedule
-    /// * `affinity` - Map of worker_id -> preference score (higher = better)
+    /// * `affinity` - Map of `worker_id` -> preference score (higher = better)
     ///
     /// # Returns
     ///
@@ -233,7 +234,9 @@ impl Scheduler {
         let preferred_worker = affinity
             .into_iter()
             .max_by(|(_, score_a), (_, score_b)| {
-                score_a.partial_cmp(score_b).unwrap_or(std::cmp::Ordering::Equal)
+                score_a
+                    .partial_cmp(score_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(worker, _)| worker);
 
@@ -367,7 +370,7 @@ impl Default for Scheduler {
 /// ```
 pub struct DataLocationTracker {
     /// Maps data keys to the set of workers that have them.
-    /// data_key -> HashSet<WorkerId>
+    /// `data_key` -> `HashSet`<WorkerId>
     locations: Arc<RwLock<HashMap<String, HashSet<WorkerId>>>>,
 }
 
@@ -418,7 +421,7 @@ impl DataLocationTracker {
 
     /// Finds all workers that have any of the specified data items.
     ///
-    /// Returns a map of worker_id -> count of data items present on that worker.
+    /// Returns a map of `worker_id` -> count of data items present on that worker.
     /// Useful for calculating affinity scores.
     ///
     /// # Arguments
@@ -427,7 +430,7 @@ impl DataLocationTracker {
     ///
     /// # Returns
     ///
-    /// HashMap mapping each worker to the number of requested data items it has
+    /// `HashMap` mapping each worker to the number of requested data items it has
     pub async fn locate_data_batch(&self, data_keys: &[String]) -> HashMap<WorkerId, usize> {
         let locations = self.locations.read().await;
         let mut worker_counts: HashMap<WorkerId, usize> = HashMap::new();
@@ -478,7 +481,10 @@ impl DataLocationTracker {
         });
 
         if removed_count > 0 {
-            info!("Removed worker {:?} from {} data items", worker_id, removed_count);
+            info!(
+                "Removed worker {:?} from {} data items",
+                worker_id, removed_count
+            );
         }
 
         removed_count
@@ -961,8 +967,10 @@ mod tests {
             .build()
             .unwrap();
 
-        let (task_id, preferred_worker) =
-            scheduler.submit_with_affinity(task, affinity).await.unwrap();
+        let (task_id, preferred_worker) = scheduler
+            .submit_with_affinity(task, affinity)
+            .await
+            .unwrap();
 
         assert!(task_id != TaskId::default());
         assert_eq!(preferred_worker, Some(worker2)); // Higher affinity

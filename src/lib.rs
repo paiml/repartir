@@ -82,6 +82,8 @@ pub mod scheduler;
 pub mod task;
 #[cfg(feature = "tensor")]
 pub mod tensor;
+#[cfg(feature = "tui")]
+pub mod tui;
 
 use error::{RepartirError, Result};
 use executor::cpu::CpuExecutor;
