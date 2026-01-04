@@ -79,6 +79,8 @@ pub mod error;
 pub mod executor;
 pub mod messaging;
 pub mod scheduler;
+#[cfg(feature = "serverless")]
+pub mod serverless;
 pub mod task;
 #[cfg(feature = "tensor")]
 pub mod tensor;
