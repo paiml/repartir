@@ -8,11 +8,17 @@ pub mod cpu;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+#[cfg(feature = "microvm")]
+pub mod microvm;
+
 #[cfg(feature = "remote")]
 pub mod remote;
 
 #[cfg(feature = "remote-tls")]
 pub mod tls;
+
+#[cfg(feature = "simd")]
+pub mod simd;
 
 use crate::error::Result;
 use crate::task::{ExecutionResult, Task};

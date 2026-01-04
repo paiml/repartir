@@ -415,21 +415,143 @@ cargo run --example pushpull_example
 
 ## Architecture
 
-Repartir follows a clean, layered architecture:
+Repartir follows a clean, layered architecture with pepita providing low-level primitives:
 
 ```
-┌─────────────────────────────────────┐
-│         Pool (High-Level API)       │
-├─────────────────────────────────────┤
-│  Scheduler (Priority Queue + Work  │
-│   Stealing - Blumofe & Leiserson)   │
-├─────────────────────────────────────┤
-│         Executor Backends           │
-│  ┌────────┐  ┌────────┐  ┌────────┐│
-│  │  CPU   │  │  GPU   │  │ Remote ││
-│  │(v1.0)  │  │(v1.1+) │  │(v1.1+) ││
-│  └────────┘  └────────┘  └────────┘│
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         repartir                                 │
+│                  (High-level Distributed API)                    │
+├─────────────────────────────────────────────────────────────────┤
+│  Pool │ Scheduler │ Serverless │ Checkpoint │ Messaging         │
+├─────────────────────────────────────────────────────────────────┤
+│                      Executor Backends                           │
+│  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐    │
+│  │  CPU   │  │  GPU   │  │MicroVM │  │  SIMD  │  │ Remote │    │
+│  │(v1.0)  │  │(v1.1+) │  │(v2.0)  │  │(v2.0)  │  │(v1.1+) │    │
+│  └────────┘  └────────┘  └───┬────┘  └───┬────┘  └────────┘    │
+└──────────────────────────────┼───────────┼──────────────────────┘
+                               │           │
+┌──────────────────────────────▼───────────▼──────────────────────┐
+│                          pepita                                  │
+│              (Sovereign AI Kernel Interfaces)                    │
+├─────────────┬─────────────┬─────────────┬───────────────────────┤
+│   vmm.rs    │  virtio.rs  │  simd.rs    │      zram.rs          │
+│  (MicroVMs) │  (devices)  │  (vectors)  │   (compression)       │
+├─────────────┼─────────────┼─────────────┼───────────────────────┤
+│   gpu.rs    │ scheduler   │  executor   │     pool.rs           │
+│  (compute)  │(work-steal) │ (backends)  │   (high-level)        │
+├─────────────┴─────────────┴─────────────┴───────────────────────┤
+│          io_uring │ ublk │ blk_mq │ memory (Kernel ABI)         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Module Overview
+
+| Module | Purpose | Backend |
+|--------|---------|---------|
+| **`executor::cpu`** | Execute binaries on CPU threads with work-stealing | Native threads |
+| **`executor::gpu`** | GPU compute detection and shader execution | wgpu (Vulkan/Metal/DX12) |
+| **`executor::microvm`** | Hardware-isolated execution in KVM MicroVMs | pepita::vmm |
+| **`executor::simd`** | SIMD-accelerated vector operations | pepita::simd (AVX-512/NEON) |
+| **`executor::remote`** | Distributed execution over TCP | rustls TLS 1.3 |
+| **`serverless`** | Function-as-a-Service with warm pools | pepita::vmm + pepita::virtio |
+| **`scheduler`** | Priority-based work-stealing scheduler | Blumofe-Leiserson algorithm |
+| **`checkpoint`** | Parquet-based checkpoint storage | Apache Parquet |
+| **`messaging`** | PUB/SUB and PUSH/PULL patterns | tokio channels |
+
+### Pepita Integration (v2.0+)
+
+Repartir v2.0 integrates with [pepita](../pepita) for hardware-accelerated execution:
+
+#### SIMD Executor
+
+Execute vectorized operations using AVX-512/AVX2/SSE/NEON:
+
+```rust
+use repartir::executor::simd::{SimdExecutor, SimdTask};
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let executor = SimdExecutor::new();
+
+    // Check capabilities
+    println!("SIMD: {}-bit vectors", executor.vector_width());
+
+    // Vector addition (SIMD accelerated)
+    let a = vec![1.0f32; 10000];
+    let b = vec![2.0f32; 10000];
+    let task = SimdTask::vadd_f32(a, b);
+    let result = executor.execute_simd(task).await?;
+
+    println!("Throughput: {:.2}M elem/s", result.throughput() / 1_000_000.0);
+    Ok(())
+}
+```
+
+**Supported operations**: `vadd_f32`, `vadd_f64`, `vmul_f32`, `dot_f32`, `matmul_f32`
+
+#### MicroVM Executor
+
+Hardware-isolated execution with sub-100ms cold start:
+
+```rust
+use repartir::executor::microvm::{MicroVmExecutor, MicroVmExecutorConfig};
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let config = MicroVmExecutorConfig::builder()
+        .memory_mib(256)
+        .vcpus(2)
+        .warm_pool(true, 3)  // Keep 3 VMs warm
+        .build()?;
+
+    let executor = MicroVmExecutor::new(config)?;
+
+    // VMs from warm pool start in <5ms
+    // Cold start is <100ms
+    Ok(())
+}
+```
+
+**Features**: KVM isolation, warm pools, jailer security, virtio devices
+
+#### Serverless Functions
+
+Function-as-a-Service with automatic warm pool management:
+
+```rust
+use repartir::serverless::{Function, FunctionService, Runtime, Trigger, HttpMethod};
+use std::path::PathBuf;
+
+#[tokio::main]
+async fn main() -> repartir::error::Result<()> {
+    let mut service = FunctionService::new();
+
+    let function = Function::builder()
+        .name("process-data")
+        .runtime(Runtime::RustNative { binary: PathBuf::from("./target/release/worker") })
+        .memory_mib(256)
+        .trigger(Trigger::Http {
+            path: "/api/process".to_string(),
+            methods: vec![HttpMethod::Post],
+        })
+        .build()?;
+
+    service.register(function)?;
+
+    // Invoke function
+    let request = InvocationRequest::new("process-data", b"input data");
+    let response = service.invoke(request).await?;
+
+    Ok(())
+}
+```
+
+**Run examples:**
+```bash
+cargo run --example simd_example --features simd
+cargo run --example microvm_example --features microvm
+cargo run --example serverless_example --features serverless
 ```
 
 ## Iron Lotus Framework
@@ -498,14 +620,19 @@ make tier3
 
 **Target**: 1-6 hours (run overnight or in CI)
 
-## Test Results (v1.0)
+## Test Results (v2.0)
 
 ```
-✓ 21 unit tests          (0.10s)
-✓ 4 property-based tests (1.92s)
-✓ 4 documentation tests  (0.23s)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  29 tests PASSED
+✓ 190 unit tests         (0.12s)  - lib tests
+✓ 32 integration tests   (0.10s)  - pepita integration
+✓ 4 property-based tests (1.53s)  - proptest
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  226 tests PASSED
+
+pepita (dependency):
+✓ 417 unit tests         (0.71s)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  643 total tests across pepita + repartir
 ```
 
 ## Sovereign AI Principles

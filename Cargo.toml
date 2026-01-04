@@ -1,6 +1,6 @@
 [package]
 name = "repartir"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2021"
 authors = ["Pragmatic AI Labs"]
 description = "Sovereign AI-grade distributed computing primitives for Rust (CPU, GPU, HPC)"
@@ -20,7 +20,10 @@ remote-tls = ["remote", "rustls", "tokio-rustls", "rustls-pemfile"]
 checkpoint = ["trueno-db", "tokio", "arrow", "parquet"]  # v2.0: Persistent checkpointing with Parquet
 tensor = ["trueno"]                  # v2.0: SIMD tensor operations
 tui = ["ratatui", "crossterm", "tokio"]  # Job flow TUI visualization
-full = ["cpu", "gpu", "remote", "remote-tls", "checkpoint", "tensor", "tui"]
+serverless = ["pepita", "tokio"]    # v2.0: Serverless functions with pepita
+microvm = ["pepita", "tokio"]       # v2.0: MicroVM isolation with pepita
+simd = ["pepita"]                   # v2.0: SIMD acceleration with pepita
+full = ["cpu", "gpu", "remote", "remote-tls", "checkpoint", "tensor", "tui", "serverless", "microvm", "simd"]
 
 [dependencies]
 # Core async runtime (industry standard, pure Rust)
@@ -69,6 +72,9 @@ trueno = { version = "0.6", features = ["parallel"], optional = true }
 # v2.0: Parquet checkpoint storage (Apache Arrow ecosystem)
 arrow = { version = "53.0", optional = true }
 parquet = { version = "53.0", optional = true }
+
+# v2.0: Pepita - Sovereign AI kernel interfaces and infrastructure
+pepita = { path = "../pepita", optional = true }
 
 [dev-dependencies]
 # Property-based testing (certeza Tier 2)
