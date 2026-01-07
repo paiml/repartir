@@ -2972,7 +2972,7 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
 name = "repartir"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "arrow",
  "bincode",
@@ -2996,7 +2996,7 @@ dependencies = [
  "tokio-test",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.11.0",
  "trueno-db",
  "uuid",
  "wgpu",
@@ -3760,6 +3760,17 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8c98b9aef7ce98ccf2cf7b37c5d55cbc6392567ca92dc4d350ef8c2011fae08"
 dependencies = [
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "trueno"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a0756605a19a0b79f5dca9b61fba7e428c497abe9ebeac2ef91b39d90b6da91"
+dependencies = [
+ "anyhow",
+ "num_cpus",
  "rayon",
  "thiserror 2.0.17",
 ]
@@ -3782,7 +3793,7 @@ dependencies = [
  "tonic",
  "tracing",
  "tracing-subscriber",
- "trueno",
+ "trueno 0.6.0",
  "wasm-bindgen",
  "web-sys",
 ]
