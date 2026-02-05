@@ -6,6 +6,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **repartir** provides Sovereign AI-grade distributed computing primitives for Rust. It enables CPU, GPU, and remote execution with work-stealing schedulers, checkpointing, and TUI visualization.
 
+## Code Search (pmat query)
+
+**NEVER use grep or rg for code discovery.** Use `pmat query` instead -- it returns quality-annotated, ranked results with TDG scores and fault annotations.
+
+```bash
+# Find functions by intent
+pmat query "work stealing scheduler" --limit 10
+
+# Find high-quality code
+pmat query "task executor" --min-grade A --exclude-tests
+
+# Find with fault annotations (unwrap, panic, unsafe, etc.)
+pmat query "remote dispatch" --faults
+
+# Filter by complexity
+pmat query "load balancing" --max-complexity 10
+
+# Cross-project search
+pmat query "gpu compute" --include-project ../trueno
+
+# Git history search (find code by commit intent via RRF fusion)
+pmat query "fix deadlock" -G
+pmat query "scheduler" --git-history
+
+# Enrichment flags (combine freely)
+pmat query "scheduler" --churn              # git volatility (commit count, churn score)
+pmat query "executor" --duplicates           # code clone detection (MinHash+LSH)
+pmat query "task queue" --entropy           # pattern diversity (repetitive vs unique)
+pmat query "work stealing" --churn --duplicates --entropy --faults -G  # full audit
+```
+
 ## Build and Test Commands
 
 ```bash
