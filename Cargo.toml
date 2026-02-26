@@ -119,6 +119,7 @@ similar_names = "allow"
 multiple_crate_versions = "allow"
 
 [profile.dev]
+panic = "abort"
 # Fast incremental compilation for Tier 1 feedback
 opt-level = 0
 
