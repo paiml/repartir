@@ -1,3 +1,10 @@
 # ZRAM build acceleration
 [build]
+incremental = true
 target-dir = "/mnt/zram/targets/repartir"
+
+[alias]
+t = "test"
+c = "check"
+b = "build --release"
+cl = "clippy --all-targets -- -D warnings"

@@ -153,3 +153,6 @@ required-features = ["remote"]
 [[bin]]
 name = "job-flow"
 required-features = ["tui", "remote"]
+
+[package.metadata.release]
+shared-version = true
