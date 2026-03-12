@@ -58,7 +58,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-repartir = "0.1"
+repartir = "2.0"
 tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
 ```
 
@@ -261,25 +261,25 @@ Repartir supports multiple execution backends via feature flags:
 ```toml
 [dependencies]
 # CPU only (default)
-repartir = "0.1"
+repartir = "2.0"
 
 # With GPU support (v1.1+)
-repartir = { version = "0.1", features = ["gpu"] }
+repartir = { version = "2.0", features = ["gpu"] }
 
 # With remote execution (v1.1+)
-repartir = { version = "0.1", features = ["remote"] }
+repartir = { version = "2.0", features = ["remote"] }
 
 # With TLS encryption (v1.1+)
-repartir = { version = "0.1", features = ["remote-tls"] }
+repartir = { version = "2.0", features = ["remote-tls"] }
 
 # With Parquet checkpointing (v2.0+)
-repartir = { version = "0.1", features = ["checkpoint"] }
+repartir = { version = "2.0", features = ["checkpoint"] }
 
 # With SIMD tensor operations (v2.0+)
-repartir = { version = "0.1", features = ["tensor"] }
+repartir = { version = "2.0", features = ["tensor"] }
 
 # All features
-repartir = { version = "0.1", features = ["full"] }
+repartir = { version = "2.0", features = ["full"] }
 ```
 
 ### GPU Executor (v1.1+)
