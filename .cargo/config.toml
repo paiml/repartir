@@ -1,7 +1,5 @@
-# ZRAM build acceleration
 [build]
 incremental = true
-target-dir = "/mnt/zram/targets/repartir"
 
 [alias]
 t = "test"
