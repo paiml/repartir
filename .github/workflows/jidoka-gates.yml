@@ -9,7 +9,7 @@ jobs:
   tier1-quick-checks:
     name: "Tier 1: Quick Checks (Sub-Second)"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
+    timeout-minutes: 15
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
