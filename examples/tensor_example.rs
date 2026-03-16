@@ -19,10 +19,7 @@ fn main() -> repartir::error::Result<()> {
     // Create tensor executor with CPU backend
     let executor = TensorExecutor::builder().backend(Backend::Cpu).build()?;
 
-    println!(
-        "TensorExecutor created (backend: {:?})\n",
-        executor.backend()
-    );
+    println!("TensorExecutor created (backend: {:?})\n", executor.backend());
 
     // Example 1: Element-wise addition
     println!("Example 1: Element-wise Addition");

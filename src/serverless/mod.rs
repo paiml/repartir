@@ -57,9 +57,7 @@ pub enum Runtime {
 
 impl Default for Runtime {
     fn default() -> Self {
-        Self::RustNative {
-            binary: PathBuf::new(),
-        }
+        Self::RustNative { binary: PathBuf::new() }
     }
 }
 
@@ -455,11 +453,7 @@ impl FunctionService {
     /// Create with custom configuration
     #[must_use]
     pub fn with_config(config: ServiceConfig) -> Self {
-        Self {
-            functions: HashMap::new(),
-            instances: HashMap::new(),
-            config,
-        }
+        Self { functions: HashMap::new(), instances: HashMap::new(), config }
     }
 
     /// Register a function
@@ -505,11 +499,9 @@ impl FunctionService {
 
         // Find function
         let function =
-            self.functions
-                .get(&request.function)
-                .ok_or_else(|| RepartirError::InvalidTask {
-                    reason: format!("Function '{}' not found", request.function),
-                })?;
+            self.functions.get(&request.function).ok_or_else(|| RepartirError::InvalidTask {
+                reason: format!("Function '{}' not found", request.function),
+            })?;
 
         // Dry run just validates
         if request.invocation_type == InvocationType::DryRun {
@@ -528,11 +520,7 @@ impl FunctionService {
             function.memory_mib
         );
 
-        Ok(InvocationResponse::success(
-            request.request_id,
-            output.into_bytes(),
-            start.elapsed(),
-        ))
+        Ok(InvocationResponse::success(request.request_id, output.into_bytes(), start.elapsed()))
     }
 
     /// Get service configuration
@@ -618,9 +606,7 @@ mod tests {
 
     #[test]
     fn test_runtime_rust_native() {
-        let runtime = Runtime::RustNative {
-            binary: PathBuf::from("/usr/bin/myapp"),
-        };
+        let runtime = Runtime::RustNative { binary: PathBuf::from("/usr/bin/myapp") };
         if let Runtime::RustNative { binary } = runtime {
             assert_eq!(binary, PathBuf::from("/usr/bin/myapp"));
         } else {
@@ -630,9 +616,7 @@ mod tests {
 
     #[test]
     fn test_runtime_container() {
-        let runtime = Runtime::Container {
-            image: "myregistry/myimage:latest".to_string(),
-        };
+        let runtime = Runtime::Container { image: "myregistry/myimage:latest".to_string() };
         if let Runtime::Container { image } = runtime {
             assert_eq!(image, "myregistry/myimage:latest");
         } else {
@@ -642,9 +626,7 @@ mod tests {
 
     #[test]
     fn test_runtime_wasm() {
-        let runtime = Runtime::Wasm {
-            module: PathBuf::from("./func.wasm"),
-        };
+        let runtime = Runtime::Wasm { module: PathBuf::from("./func.wasm") };
         if let Runtime::Wasm { module } = runtime {
             assert_eq!(module, PathBuf::from("./func.wasm"));
         } else {
@@ -660,9 +642,7 @@ mod tests {
 
     #[test]
     fn test_runtime_serialize_deserialize() {
-        let runtime = Runtime::Container {
-            image: "test:latest".to_string(),
-        };
+        let runtime = Runtime::Container { image: "test:latest".to_string() };
         let json = serde_json::to_string(&runtime).unwrap();
         let deserialized: Runtime = serde_json::from_str(&json).unwrap();
         assert_eq!(runtime, deserialized);
@@ -688,9 +668,7 @@ mod tests {
 
     #[test]
     fn test_trigger_schedule() {
-        let trigger = Trigger::Schedule {
-            cron: "0 * * * *".to_string(),
-        };
+        let trigger = Trigger::Schedule { cron: "0 * * * *".to_string() };
         if let Trigger::Schedule { cron } = trigger {
             assert_eq!(cron, "0 * * * *");
         } else {
@@ -700,9 +678,7 @@ mod tests {
 
     #[test]
     fn test_trigger_queue() {
-        let trigger = Trigger::Queue {
-            queue_name: "my-queue".to_string(),
-        };
+        let trigger = Trigger::Queue { queue_name: "my-queue".to_string() };
         if let Trigger::Queue { queue_name } = trigger {
             assert_eq!(queue_name, "my-queue");
         } else {
@@ -738,9 +714,7 @@ mod tests {
     fn test_function_builder_minimal() {
         let func = Function::builder()
             .name("test-func")
-            .runtime(Runtime::RustNative {
-                binary: PathBuf::from("./test"),
-            })
+            .runtime(Runtime::RustNative { binary: PathBuf::from("./test") })
             .build()
             .unwrap();
 
@@ -753,9 +727,7 @@ mod tests {
     fn test_function_builder_full() {
         let func = Function::builder()
             .name("complex-func")
-            .runtime(Runtime::Container {
-                image: "myimage:v1".to_string(),
-            })
+            .runtime(Runtime::Container { image: "myimage:v1".to_string() })
             .memory_mib(512)
             .timeout(Duration::from_secs(60))
             .env("API_KEY", "secret")
@@ -779,9 +751,7 @@ mod tests {
     #[test]
     fn test_function_builder_no_name_error() {
         let result = Function::builder()
-            .runtime(Runtime::RustNative {
-                binary: PathBuf::from("./test"),
-            })
+            .runtime(Runtime::RustNative { binary: PathBuf::from("./test") })
             .build();
 
         assert!(result.is_err());
@@ -796,17 +766,9 @@ mod tests {
 
     #[test]
     fn test_function_id_unique() {
-        let func1 = Function::builder()
-            .name("func1")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func1 = Function::builder().name("func1").runtime(Runtime::default()).build().unwrap();
 
-        let func2 = Function::builder()
-            .name("func2")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func2 = Function::builder().name("func2").runtime(Runtime::default()).build().unwrap();
 
         assert_ne!(func1.id(), func2.id());
     }
@@ -893,11 +855,8 @@ mod tests {
 
     #[test]
     fn test_function_service_with_config() {
-        let config = ServiceConfig {
-            max_concurrency: 500,
-            warm_pool_size: 5,
-            ..Default::default()
-        };
+        let config =
+            ServiceConfig { max_concurrency: 500, warm_pool_size: 5, ..Default::default() };
         let service = FunctionService::with_config(config);
         assert_eq!(service.config().max_concurrency, 500);
         assert_eq!(service.config().warm_pool_size, 5);
@@ -907,11 +866,7 @@ mod tests {
     fn test_function_service_register() {
         let mut service = FunctionService::new();
 
-        let func = Function::builder()
-            .name("my-func")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func = Function::builder().name("my-func").runtime(Runtime::default()).build().unwrap();
 
         service.register(func).unwrap();
         assert_eq!(service.function_count(), 1);
@@ -921,17 +876,11 @@ mod tests {
     fn test_function_service_register_duplicate_error() {
         let mut service = FunctionService::new();
 
-        let func1 = Function::builder()
-            .name("my-func")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func1 =
+            Function::builder().name("my-func").runtime(Runtime::default()).build().unwrap();
 
-        let func2 = Function::builder()
-            .name("my-func")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func2 =
+            Function::builder().name("my-func").runtime(Runtime::default()).build().unwrap();
 
         service.register(func1).unwrap();
         let result = service.register(func2);
@@ -942,11 +891,7 @@ mod tests {
     fn test_function_service_unregister() {
         let mut service = FunctionService::new();
 
-        let func = Function::builder()
-            .name("my-func")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func = Function::builder().name("my-func").runtime(Runtime::default()).build().unwrap();
 
         service.register(func).unwrap();
         assert_eq!(service.function_count(), 1);
@@ -1001,11 +946,7 @@ mod tests {
     fn test_function_service_invoke() {
         let mut service = FunctionService::new();
 
-        let func = Function::builder()
-            .name("echo")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func = Function::builder().name("echo").runtime(Runtime::default()).build().unwrap();
 
         service.register(func).unwrap();
 
@@ -1030,11 +971,7 @@ mod tests {
     fn test_function_service_invoke_dry_run() {
         let mut service = FunctionService::new();
 
-        let func = Function::builder()
-            .name("test")
-            .runtime(Runtime::default())
-            .build()
-            .unwrap();
+        let func = Function::builder().name("test").runtime(Runtime::default()).build().unwrap();
 
         service.register(func).unwrap();
 
@@ -1065,11 +1002,7 @@ mod tests {
 
     #[test]
     fn test_cold_start_metrics_warm_ratio() {
-        let metrics = ColdStartMetrics {
-            cold_starts: 20,
-            warm_starts: 80,
-            ..Default::default()
-        };
+        let metrics = ColdStartMetrics { cold_starts: 20, warm_starts: 80, ..Default::default() };
         assert!((metrics.warm_start_ratio() - 0.8).abs() < 0.001);
     }
 
@@ -1099,9 +1032,7 @@ mod tests {
         // Register function
         let func = Function::builder()
             .name("processor")
-            .runtime(Runtime::RustNative {
-                binary: PathBuf::from("./processor"),
-            })
+            .runtime(Runtime::RustNative { binary: PathBuf::from("./processor") })
             .memory_mib(256)
             .timeout(Duration::from_secs(60))
             .trigger(Trigger::Http {

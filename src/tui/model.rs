@@ -282,10 +282,7 @@ impl Alert {
             Self::MemoryPressure { node, pct } => {
                 format!("{node}: memory pressure ({pct:.0}%)")
             }
-            Self::WorkImbalance {
-                overloaded,
-                underloaded,
-            } => {
+            Self::WorkImbalance { overloaded, underloaded } => {
                 format!("Work imbalance: {overloaded} overloaded, {underloaded} idle")
             }
             Self::NodeSuspected { node, last_seen } => {
@@ -294,11 +291,7 @@ impl Alert {
             Self::TaskTimeout { task_id, elapsed } => {
                 format!("Task {task_id}: timeout after {elapsed:?}")
             }
-            Self::BackendError {
-                node,
-                backend,
-                error,
-            } => {
+            Self::BackendError { node, backend, error } => {
                 format!("{node} {backend}: {error}")
             }
         }
@@ -348,11 +341,7 @@ impl MetricsHistory {
     }
 
     /// Updates history with current node data.
-    #[allow(
-        clippy::cast_precision_loss,
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
-    )]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn push(&mut self, nodes: &[NodeStatus]) {
         // Ensure we have enough history vectors
         while self.cpu_history.len() < nodes.len() {
@@ -535,10 +524,7 @@ impl App {
         for node in &self.nodes {
             // Memory pressure alert
             if node.mem_pct > 90.0 {
-                alerts.push(Alert::MemoryPressure {
-                    node: node.name.clone(),
-                    pct: node.mem_pct,
-                });
+                alerts.push(Alert::MemoryPressure { node: node.name.clone(), pct: node.mem_pct });
             }
 
             // Check backends for memory pressure
@@ -562,18 +548,8 @@ impl App {
 
         // Work imbalance detection
         if self.nodes.len() >= 2 {
-            let max_tasks = self
-                .nodes
-                .iter()
-                .map(|n| n.running_tasks)
-                .max()
-                .unwrap_or(0);
-            let min_tasks = self
-                .nodes
-                .iter()
-                .map(|n| n.running_tasks)
-                .min()
-                .unwrap_or(0);
+            let max_tasks = self.nodes.iter().map(|n| n.running_tasks).max().unwrap_or(0);
+            let min_tasks = self.nodes.iter().map(|n| n.running_tasks).min().unwrap_or(0);
 
             if max_tasks > 0 && f64::from(max_tasks - min_tasks) / f64::from(max_tasks) > 0.5 {
                 let overloaded = self.nodes.iter().find(|n| n.running_tasks == max_tasks);
@@ -678,11 +654,7 @@ mod tests {
 
     #[test]
     fn test_task_queue_utilization() {
-        let queue = TaskQueue {
-            pending: 500,
-            in_flight: 0,
-            ..Default::default()
-        };
+        let queue = TaskQueue { pending: 500, in_flight: 0, ..Default::default() };
         assert!((queue.utilization_pct() - 50.0).abs() < 0.1);
     }
 
@@ -718,10 +690,7 @@ mod tests {
 
     #[test]
     fn test_alert_memory_pressure_message() {
-        let alert = Alert::MemoryPressure {
-            node: "node-1".to_string(),
-            pct: 95.0,
-        };
+        let alert = Alert::MemoryPressure { node: "node-1".to_string(), pct: 95.0 };
         assert!(alert.message().contains("memory pressure"));
         assert!(alert.message().contains("95%"));
     }
@@ -737,10 +706,8 @@ mod tests {
 
     #[test]
     fn test_alert_node_suspected_message() {
-        let alert = Alert::NodeSuspected {
-            node: "node-1".to_string(),
-            last_seen: Duration::from_secs(30),
-        };
+        let alert =
+            Alert::NodeSuspected { node: "node-1".to_string(), last_seen: Duration::from_secs(30) };
         let msg = alert.message();
         assert!(msg.contains("suspected offline"));
         assert!(msg.contains("node-1"));
@@ -748,10 +715,7 @@ mod tests {
 
     #[test]
     fn test_alert_task_timeout_message() {
-        let alert = Alert::TaskTimeout {
-            task_id: TaskId::new(),
-            elapsed: Duration::from_secs(60),
-        };
+        let alert = Alert::TaskTimeout { task_id: TaskId::new(), elapsed: Duration::from_secs(60) };
         let msg = alert.message();
         assert!(msg.contains("timeout"));
     }
@@ -938,9 +902,7 @@ mod tests {
         app.add_node(node);
 
         let alerts = app.generate_alerts();
-        assert!(alerts
-            .iter()
-            .any(|a| matches!(a, Alert::MemoryPressure { .. })));
+        assert!(alerts.iter().any(|a| matches!(a, Alert::MemoryPressure { .. })));
     }
 
     #[test]
@@ -956,9 +918,7 @@ mod tests {
         app.add_node(node2);
 
         let alerts = app.generate_alerts();
-        assert!(alerts
-            .iter()
-            .any(|a| matches!(a, Alert::WorkImbalance { .. })));
+        assert!(alerts.iter().any(|a| matches!(a, Alert::WorkImbalance { .. })));
     }
 
     #[test]
@@ -969,9 +929,7 @@ mod tests {
         app.add_node(node);
 
         let alerts = app.generate_alerts();
-        assert!(alerts
-            .iter()
-            .any(|a| matches!(a, Alert::NodeSuspected { .. })));
+        assert!(alerts.iter().any(|a| matches!(a, Alert::NodeSuspected { .. })));
     }
 
     #[test]
@@ -988,9 +946,7 @@ mod tests {
         app.add_node(node);
 
         let alerts = app.generate_alerts();
-        assert!(alerts
-            .iter()
-            .any(|a| matches!(a, Alert::MemoryPressure { .. })));
+        assert!(alerts.iter().any(|a| matches!(a, Alert::MemoryPressure { .. })));
     }
 
     #[test]

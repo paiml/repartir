@@ -472,10 +472,9 @@ impl TaskBuilder {
         let binary_required = true;
 
         let binary = if binary_required {
-            self.binary
-                .ok_or_else(|| crate::error::RepartirError::InvalidTask {
-                    reason: "Binary path not set".to_string(),
-                })?
+            self.binary.ok_or_else(|| crate::error::RepartirError::InvalidTask {
+                reason: "Binary path not set".to_string(),
+            })?
         } else {
             self.binary.unwrap_or_else(|| PathBuf::from(""))
         };
@@ -778,33 +777,21 @@ mod tests {
 
     #[test]
     fn test_backend_cpu() {
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task = Task::builder().binary("/bin/echo").backend(Backend::Cpu).build().unwrap();
         assert_eq!(task.backend(), Backend::Cpu);
     }
 
     #[cfg(feature = "gpu")]
     #[test]
     fn test_backend_gpu() {
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .backend(Backend::Gpu)
-            .build()
-            .unwrap();
+        let task = Task::builder().binary("/bin/echo").backend(Backend::Gpu).build().unwrap();
         assert_eq!(task.backend(), Backend::Gpu);
     }
 
     #[cfg(feature = "remote")]
     #[test]
     fn test_backend_remote() {
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .backend(Backend::Remote)
-            .build()
-            .unwrap();
+        let task = Task::builder().binary("/bin/echo").backend(Backend::Remote).build().unwrap();
         assert_eq!(task.backend(), Backend::Remote);
     }
 

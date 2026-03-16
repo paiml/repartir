@@ -93,14 +93,11 @@ fn bench_data_location_batch_query(c: &mut Criterion) {
 
                 b.iter(|| {
                     rt.block_on(async {
-                        let data_keys: Vec<String> = (0..num_datasets)
-                            .map(|i| format!("dataset_{}", i))
-                            .collect();
+                        let data_keys: Vec<String> =
+                            (0..num_datasets).map(|i| format!("dataset_{}", i)).collect();
 
-                        let _locations = scheduler
-                            .data_tracker()
-                            .locate_data_batch(black_box(&data_keys))
-                            .await;
+                        let _locations =
+                            scheduler.data_tracker().locate_data_batch(black_box(&data_keys)).await;
                     });
                 });
             },
@@ -154,9 +151,8 @@ fn bench_affinity_calculation(c: &mut Criterion) {
                             .build()
                             .unwrap();
 
-                        let data_keys: Vec<String> = (0..num_dependencies)
-                            .map(|i| format!("dataset_{}", i))
-                            .collect();
+                        let data_keys: Vec<String> =
+                            (0..num_dependencies).map(|i| format!("dataset_{}", i)).collect();
 
                         // This internally calculates affinity
                         scheduler
@@ -186,11 +182,8 @@ fn bench_submit_comparison(c: &mut Criterion) {
         b.iter(|| {
             rt.block_on(async {
                 let scheduler = Scheduler::with_capacity(1000);
-                let task = Task::builder()
-                    .binary("/bin/process")
-                    .backend(Backend::Cpu)
-                    .build()
-                    .unwrap();
+                let task =
+                    Task::builder().binary("/bin/process").backend(Backend::Cpu).build().unwrap();
 
                 scheduler.submit(black_box(task)).await.unwrap();
             });
@@ -207,16 +200,11 @@ fn bench_submit_comparison(c: &mut Criterion) {
                 // Pre-populate some data locations
                 let worker_id = WorkerId::new();
                 for i in 0..10 {
-                    tracker
-                        .track_data(format!("dataset_{}", i), worker_id)
-                        .await;
+                    tracker.track_data(format!("dataset_{}", i), worker_id).await;
                 }
 
-                let task = Task::builder()
-                    .binary("/bin/process")
-                    .backend(Backend::Cpu)
-                    .build()
-                    .unwrap();
+                let task =
+                    Task::builder().binary("/bin/process").backend(Backend::Cpu).build().unwrap();
 
                 let data_keys: Vec<String> = (0..10).map(|i| format!("dataset_{}", i)).collect();
 
@@ -244,11 +232,8 @@ fn bench_locality_metrics(c: &mut Criterion) {
 
             // Submit some tasks to populate metrics
             for _ in 0..100 {
-                let task = Task::builder()
-                    .binary("/bin/echo")
-                    .backend(Backend::Cpu)
-                    .build()
-                    .unwrap();
+                let task =
+                    Task::builder().binary("/bin/echo").backend(Backend::Cpu).build().unwrap();
                 scheduler.submit(task).await.unwrap();
             }
 

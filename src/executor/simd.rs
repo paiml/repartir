@@ -436,22 +436,19 @@ impl SimdExecutor {
             SimdOperation::VaddF32 => {
                 let len = task.input_a_f32.len();
                 let mut output = vec![0.0f32; len];
-                self.ops
-                    .vadd_f32(&task.input_a_f32, &task.input_b_f32, &mut output);
+                self.ops.vadd_f32(&task.input_a_f32, &task.input_b_f32, &mut output);
                 (output, Vec::new(), None, len)
             }
             SimdOperation::VaddF64 => {
                 let len = task.input_a_f64.len();
                 let mut output = vec![0.0f64; len];
-                self.ops
-                    .vadd_f64(&task.input_a_f64, &task.input_b_f64, &mut output);
+                self.ops.vadd_f64(&task.input_a_f64, &task.input_b_f64, &mut output);
                 (Vec::new(), output, None, len)
             }
             SimdOperation::VmulF32 => {
                 let len = task.input_a_f32.len();
                 let mut output = vec![0.0f32; len];
-                self.ops
-                    .vmul_f32(&task.input_a_f32, &task.input_b_f32, &mut output);
+                self.ops.vmul_f32(&task.input_a_f32, &task.input_b_f32, &mut output);
                 (output, Vec::new(), None, len)
             }
             SimdOperation::DotF32 => {
@@ -480,22 +477,15 @@ impl SimdExecutor {
 
         let duration = start.elapsed();
         #[allow(clippy::cast_precision_loss)]
-        let throughput = if duration.as_nanos() > 0 {
-            elements as f64 / duration.as_secs_f64()
-        } else {
-            0.0
-        };
+        let throughput =
+            if duration.as_nanos() > 0 { elements as f64 / duration.as_secs_f64() } else { 0.0 };
 
         // Update metrics
         self.metrics.operations.fetch_add(1, Ordering::Relaxed);
         #[allow(clippy::cast_possible_truncation)]
-        self.metrics
-            .elements_processed
-            .fetch_add(elements as u64, Ordering::Relaxed);
+        self.metrics.elements_processed.fetch_add(elements as u64, Ordering::Relaxed);
         #[allow(clippy::cast_possible_truncation)]
-        self.metrics
-            .total_time_ns
-            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.metrics.total_time_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
 
         debug!(
             "SIMD task {} completed in {:?} ({:.2}M elem/s)",
@@ -773,12 +763,8 @@ mod tests {
     fn test_simd_metrics_update() {
         let metrics = SimdMetrics::default();
         metrics.operations.fetch_add(1, Ordering::Relaxed);
-        metrics
-            .elements_processed
-            .fetch_add(1000, Ordering::Relaxed);
-        metrics
-            .total_time_ns
-            .fetch_add(1_000_000, Ordering::Relaxed);
+        metrics.elements_processed.fetch_add(1000, Ordering::Relaxed);
+        metrics.total_time_ns.fetch_add(1_000_000, Ordering::Relaxed);
 
         assert_eq!(metrics.operations(), 1);
         assert_eq!(metrics.elements_processed(), 1000);
@@ -954,11 +940,8 @@ mod tests {
     #[tokio::test]
     async fn test_simd_executor_execute_trait_method() {
         let executor = SimdExecutor::new();
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .backend(crate::task::Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/bin/echo").backend(crate::task::Backend::Cpu).build().unwrap();
 
         let result = executor.execute(task).await;
         assert!(result.is_err());

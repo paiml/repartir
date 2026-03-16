@@ -30,11 +30,7 @@ async fn main() -> repartir::error::Result<()> {
     println!("1. Creating a task with checkpointing enabled...");
 
     // Create a task
-    let task = Task::builder()
-        .binary("/bin/sleep")
-        .arg("1")
-        .backend(Backend::Cpu)
-        .build()?;
+    let task = Task::builder().binary("/bin/sleep").arg("1").backend(Backend::Cpu).build()?;
 
     println!("   ✓ Task created with ID: {}", task.id());
 

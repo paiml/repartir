@@ -58,42 +58,27 @@ async fn send_heartbeat(addr: SocketAddr) -> Result<Duration> {
     let mut stream = TcpStream::connect(addr).await.map_err(RepartirError::Io)?;
 
     let message = RemoteMessage::Heartbeat;
-    let encoded = bincode::serialize(&message).map_err(|e| RepartirError::InvalidTask {
-        reason: format!("Serialization failed: {e}"),
-    })?;
+    let encoded = bincode::serialize(&message)
+        .map_err(|e| RepartirError::InvalidTask { reason: format!("Serialization failed: {e}") })?;
 
-    let len = u32::try_from(encoded.len()).map_err(|_| RepartirError::InvalidTask {
-        reason: "Message too large".to_string(),
-    })?;
+    let len = u32::try_from(encoded.len())
+        .map_err(|_| RepartirError::InvalidTask { reason: "Message too large".to_string() })?;
 
-    stream
-        .write_all(&len.to_le_bytes())
-        .await
-        .map_err(RepartirError::Io)?;
-    stream
-        .write_all(&encoded)
-        .await
-        .map_err(RepartirError::Io)?;
+    stream.write_all(&len.to_le_bytes()).await.map_err(RepartirError::Io)?;
+    stream.write_all(&encoded).await.map_err(RepartirError::Io)?;
     stream.flush().await.map_err(RepartirError::Io)?;
 
     // Read response
     let mut len_bytes = [0u8; 4];
-    stream
-        .read_exact(&mut len_bytes)
-        .await
-        .map_err(RepartirError::Io)?;
+    stream.read_exact(&mut len_bytes).await.map_err(RepartirError::Io)?;
     let response_len = u32::from_le_bytes(len_bytes) as usize;
 
     let mut buffer = vec![0u8; response_len];
-    stream
-        .read_exact(&mut buffer)
-        .await
-        .map_err(RepartirError::Io)?;
+    stream.read_exact(&mut buffer).await.map_err(RepartirError::Io)?;
 
-    let _response: RemoteMessage =
-        bincode::deserialize(&buffer).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Deserialization failed: {e}"),
-        })?;
+    let _response: RemoteMessage = bincode::deserialize(&buffer).map_err(|e| {
+        RepartirError::InvalidTask { reason: format!("Deserialization failed: {e}") }
+    })?;
 
     Ok(start.elapsed())
 }
@@ -312,9 +297,7 @@ async fn main() -> Result<()> {
         }
 
         app.add_node(node);
-        connections.push(NodeConnection {
-            last_heartbeat: Instant::now(),
-        });
+        connections.push(NodeConnection { last_heartbeat: Instant::now() });
     }
 
     let state = Arc::new(RwLock::new(SharedState { app, connections }));
@@ -462,11 +445,8 @@ mod tests {
 
     #[test]
     fn test_parse_args_skips_flags() {
-        let args = vec![
-            "job-flow".to_string(),
-            "--verbose".to_string(),
-            "127.0.0.1:9000".to_string(),
-        ];
+        let args =
+            vec!["job-flow".to_string(), "--verbose".to_string(), "127.0.0.1:9000".to_string()];
         let (standalone, addresses) = parse_args(&args).unwrap();
         assert!(!standalone);
         assert_eq!(addresses.len(), 1);

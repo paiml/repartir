@@ -54,9 +54,7 @@ impl CpuExecutor {
     /// Validates that the binary exists and is executable.
     fn validate_binary(path: &Path) -> Result<()> {
         if !path.exists() {
-            return Err(RepartirError::BinaryNotFound {
-                path: path.to_path_buf(),
-            });
+            return Err(RepartirError::BinaryNotFound { path: path.to_path_buf() });
         }
 
         // Check if file is executable (Unix-specific)
@@ -148,9 +146,7 @@ impl Executor for CpuExecutor {
                     result?
                 } else {
                     error!("Task {task_id} timed out after {timeout_duration:?}");
-                    return Err(RepartirError::Timeout {
-                        seconds: timeout_duration.as_secs(),
-                    });
+                    return Err(RepartirError::Timeout { seconds: timeout_duration.as_secs() });
                 }
             } else {
                 child_future.await?
@@ -229,18 +225,12 @@ mod tests {
     async fn test_cpu_executor_binary_not_found() {
         let executor = CpuExecutor::new();
 
-        let task = Task::builder()
-            .binary("/nonexistent/binary")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/nonexistent/binary").backend(Backend::Cpu).build().unwrap();
 
         let result = executor.execute(task).await;
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            RepartirError::BinaryNotFound { .. }
-        ));
+        assert!(matches!(result.unwrap_err(), RepartirError::BinaryNotFound { .. }));
     }
 
     #[tokio::test]
@@ -379,11 +369,7 @@ mod tests {
 
         #[cfg(unix)]
         {
-            let task = Task::builder()
-                .binary("/bin/pwd")
-                .backend(Backend::Cpu)
-                .build()
-                .unwrap();
+            let task = Task::builder().binary("/bin/pwd").backend(Backend::Cpu).build().unwrap();
 
             let result = executor.execute(task).await;
             assert!(result.is_ok());
@@ -421,11 +407,7 @@ mod tests {
         #[cfg(unix)]
         {
             // Command that produces no output
-            let task = Task::builder()
-                .binary("/bin/true")
-                .backend(Backend::Cpu)
-                .build()
-                .unwrap();
+            let task = Task::builder().binary("/bin/true").backend(Backend::Cpu).build().unwrap();
 
             let result = executor.execute(task).await;
             assert!(result.is_ok());

@@ -104,15 +104,9 @@ pub fn run(app: App) -> Result<()> {
 
     // Restore terminal
     disable_raw_mode().map_err(crate::error::RepartirError::Io)?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )
-    .map_err(crate::error::RepartirError::Io)?;
-    terminal
-        .show_cursor()
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)
         .map_err(crate::error::RepartirError::Io)?;
+    terminal.show_cursor().map_err(crate::error::RepartirError::Io)?;
 
     res
 }
@@ -126,9 +120,7 @@ fn run_event_loop<B: ratatui::backend::Backend>(
     let mut last_tick = Instant::now();
 
     loop {
-        terminal
-            .draw(|f| draw_ui(f, &app))
-            .map_err(crate::error::RepartirError::Io)?;
+        terminal.draw(|f| draw_ui(f, &app)).map_err(crate::error::RepartirError::Io)?;
 
         let timeout = tick_rate.saturating_sub(last_tick.elapsed());
         if event::poll(timeout).map_err(crate::error::RepartirError::Io)? {

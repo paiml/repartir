@@ -25,11 +25,8 @@ fn bench_pool_submit_throughput(c: &mut Criterion) {
             |b, &num_tasks| {
                 b.iter(|| {
                     rt.block_on(async {
-                        let pool = Pool::builder()
-                            .cpu_workers(4)
-                            .max_queue_size(10_000)
-                            .build()
-                            .unwrap();
+                        let pool =
+                            Pool::builder().cpu_workers(4).max_queue_size(10_000).build().unwrap();
 
                         let mut tasks = Vec::new();
                         for i in 0..num_tasks {

@@ -2,11 +2,7 @@
 //!
 //! Hardware-isolated task execution using pepita's KVM-based `MicroVMs`.
 //! Provides Docker/Lambda-like isolation with sub-100ms cold start.
-#![allow(
-    clippy::doc_markdown,
-    clippy::missing_errors_doc,
-    clippy::cast_precision_loss
-)]
+#![allow(clippy::doc_markdown, clippy::missing_errors_doc, clippy::cast_precision_loss)]
 //!
 //! ## Example
 //!
@@ -240,17 +236,12 @@ impl VmInstance {
     /// Get time since last use
     #[must_use]
     pub fn idle_time(&self) -> Duration {
-        self.last_used
-            .lock()
-            .map(|guard| guard.elapsed())
-            .unwrap_or(Duration::ZERO)
+        self.last_used.lock().map(|guard| guard.elapsed()).unwrap_or(Duration::ZERO)
     }
 
     /// Try to acquire the instance for execution
     pub fn try_acquire(&self) -> bool {
-        self.busy
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
+        self.busy.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_ok()
     }
 
     /// Release the instance after execution
@@ -323,13 +314,10 @@ impl MicroVmExecutor {
     /// Pre-warm the VM pool
     #[allow(clippy::significant_drop_tightening)]
     fn warm_pool(&self) -> Result<()> {
-        let mut instances = self
-            .instances
-            .write()
-            .map_err(|_| RepartirError::ExecutionFailed {
-                message: "Lock poisoned".to_string(),
-                exit_code: None,
-            })?;
+        let mut instances = self.instances.write().map_err(|_| RepartirError::ExecutionFailed {
+            message: "Lock poisoned".to_string(),
+            exit_code: None,
+        })?;
 
         for _ in 0..self.config.warm_pool_size {
             let instance = VmInstance::new(&self.config)?;
@@ -358,10 +346,7 @@ impl MicroVmExecutor {
 
     /// Get number of idle instances
     pub fn idle_count(&self) -> usize {
-        self.instances
-            .read()
-            .map(|guard| guard.iter().filter(|i| i.is_idle()).count())
-            .unwrap_or(0)
+        self.instances.read().map(|guard| guard.iter().filter(|i| i.is_idle()).count()).unwrap_or(0)
     }
 
     /// Get total executions
@@ -454,25 +439,13 @@ impl MicroVmExecutor {
             ExitReason::Halt | ExitReason::Shutdown => {
                 (true, b"VM execution completed".to_vec(), Vec::new())
             }
-            ExitReason::TripleFault | ExitReason::InternalError => (
-                false,
-                Vec::new(),
-                format!("VM error: {exit_reason:?}").into_bytes(),
-            ),
-            _ => (
-                true,
-                format!("Exit: {exit_reason:?}").into_bytes(),
-                Vec::new(),
-            ),
+            ExitReason::TripleFault | ExitReason::InternalError => {
+                (false, Vec::new(), format!("VM error: {exit_reason:?}").into_bytes())
+            }
+            _ => (true, format!("Exit: {exit_reason:?}").into_bytes(), Vec::new()),
         };
 
-        Ok(ExecutionResult::new(
-            task.id(),
-            i32::from(!success),
-            stdout,
-            stderr,
-            duration,
-        ))
+        Ok(ExecutionResult::new(task.id(), i32::from(!success), stdout, stderr, duration))
     }
 
     /// Evict idle instances that exceed timeout
@@ -654,10 +627,7 @@ mod tests {
 
     #[test]
     fn test_config_validate_zero_max_vms() {
-        let config = MicroVmExecutorConfig::builder()
-            .memory_mib(128)
-            .vcpus(1)
-            .max_vms(0);
+        let config = MicroVmExecutorConfig::builder().memory_mib(128).vcpus(1).max_vms(0);
         assert!(config.build().is_err());
     }
 
@@ -763,11 +733,7 @@ mod tests {
 
     #[test]
     fn test_executor_config_accessor() {
-        let config = MicroVmExecutorConfig::builder()
-            .memory_mib(512)
-            .vcpus(4)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().memory_mib(512).vcpus(4).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         assert_eq!(executor.config().memory_mib, 512);
@@ -776,10 +742,7 @@ mod tests {
 
     #[test]
     fn test_executor_metrics_initial() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(false, 0)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(false, 0).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         assert_eq!(executor.total_executions(), 0);
@@ -790,10 +753,7 @@ mod tests {
 
     #[test]
     fn test_executor_shutdown() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(true, 3)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(true, 3).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         assert_eq!(executor.instance_count(), 3);
@@ -805,10 +765,7 @@ mod tests {
 
     #[test]
     fn test_executor_debug() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(true, 2)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(true, 2).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         let debug = format!("{:?}", executor);
@@ -831,10 +788,7 @@ mod tests {
 
     #[test]
     fn test_metrics_from_executor() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(true, 5)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(true, 5).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         let metrics = MicroVmMetrics::from_executor(&executor);
@@ -866,10 +820,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_executor_execute_task() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(true, 1)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(true, 1).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
 
@@ -889,19 +840,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_executor_warm_start_tracking() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(true, 2)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(true, 2).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
 
         // First execution should be warm (from pool)
-        let task1 = Task::builder()
-            .binary("/bin/true")
-            .backend(Backend::MicroVm)
-            .build()
-            .unwrap();
+        let task1 = Task::builder().binary("/bin/true").backend(Backend::MicroVm).build().unwrap();
 
         executor.execute(task1).await.unwrap();
 
@@ -938,19 +882,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_executor_not_available() {
-        let config = MicroVmExecutorConfig::builder()
-            .warm_pool(false, 0)
-            .build()
-            .unwrap();
+        let config = MicroVmExecutorConfig::builder().warm_pool(false, 0).build().unwrap();
 
         let executor = MicroVmExecutor::new(config).unwrap();
         executor.shutdown();
 
-        let task = Task::builder()
-            .binary("/bin/true")
-            .backend(Backend::MicroVm)
-            .build()
-            .unwrap();
+        let task = Task::builder().binary("/bin/true").backend(Backend::MicroVm).build().unwrap();
 
         let result = executor.execute(task).await;
         assert!(result.is_err());

@@ -182,9 +182,7 @@ mod serverless_integration {
         // Create a serverless function
         let function = Function::builder()
             .name("test-function")
-            .runtime(Runtime::RustNative {
-                binary: PathBuf::from("/bin/echo"),
-            })
+            .runtime(Runtime::RustNative { binary: PathBuf::from("/bin/echo") })
             .memory_mib(128)
             .timeout(Duration::from_secs(30))
             .build()
@@ -212,13 +210,9 @@ mod serverless_integration {
             methods: vec![HttpMethod::Get, HttpMethod::Post],
         };
 
-        let _schedule_trigger = Trigger::Schedule {
-            cron: "0 * * * *".to_string(),
-        };
+        let _schedule_trigger = Trigger::Schedule { cron: "0 * * * *".to_string() };
 
-        let _queue_trigger = Trigger::Queue {
-            queue_name: "test-queue".to_string(),
-        };
+        let _queue_trigger = Trigger::Queue { queue_name: "test-queue".to_string() };
     }
 
     #[tokio::test]
@@ -229,9 +223,7 @@ mod serverless_integration {
         for i in 0..5 {
             let function = Function::builder()
                 .name(format!("function-{i}"))
-                .runtime(Runtime::RustNative {
-                    binary: PathBuf::from("/bin/echo"),
-                })
+                .runtime(Runtime::RustNative { binary: PathBuf::from("/bin/echo") })
                 .memory_mib(64)
                 .build()
                 .unwrap();
@@ -569,10 +561,7 @@ async fn test_task_with_environment_variables() {
 
         let result = executor.execute(task).await.unwrap();
         assert!(result.is_success());
-        assert_eq!(
-            result.stdout_str().unwrap().trim(),
-            "integration_test_value"
-        );
+        assert_eq!(result.stdout_str().unwrap().trim(), "integration_test_value");
     }
 }
 
@@ -652,11 +641,8 @@ async fn test_error_handling_integration() {
     let executor = CpuExecutor::new();
 
     // Test nonexistent binary
-    let task = Task::builder()
-        .binary("/nonexistent/binary/path")
-        .backend(Backend::Cpu)
-        .build()
-        .unwrap();
+    let task =
+        Task::builder().binary("/nonexistent/binary/path").backend(Backend::Cpu).build().unwrap();
 
     let result = executor.execute(task).await;
     assert!(result.is_err());

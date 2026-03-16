@@ -42,11 +42,9 @@ impl TlsConfig {
     ///
     /// Returns an error if client TLS is not configured.
     pub fn client_config(&self) -> Result<Arc<rustls::ClientConfig>> {
-        self.client_config
-            .clone()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Client TLS not configured".to_string(),
-            })
+        self.client_config.clone().ok_or_else(|| RepartirError::InvalidTask {
+            reason: "Client TLS not configured".to_string(),
+        })
     }
 
     /// Returns the server configuration.
@@ -55,11 +53,9 @@ impl TlsConfig {
     ///
     /// Returns an error if server TLS is not configured.
     pub fn server_config(&self) -> Result<Arc<rustls::ServerConfig>> {
-        self.server_config
-            .clone()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Server TLS not configured".to_string(),
-            })
+        self.server_config.clone().ok_or_else(|| RepartirError::InvalidTask {
+            reason: "Server TLS not configured".to_string(),
+        })
     }
 }
 
@@ -133,11 +129,9 @@ impl TlsConfigBuilder {
                 let ca_certs = load_certs(ca_path)?;
                 let mut root_store = rustls::RootCertStore::empty();
                 for cert in ca_certs {
-                    root_store
-                        .add(cert)
-                        .map_err(|e| RepartirError::InvalidTask {
-                            reason: format!("Failed to add CA certificate: {e}"),
-                        })?;
+                    root_store.add(cert).map_err(|e| RepartirError::InvalidTask {
+                        reason: format!("Failed to add CA certificate: {e}"),
+                    })?;
                 }
                 rustls::ClientConfig::builder()
                     .with_root_certificates(root_store)
@@ -153,9 +147,7 @@ impl TlsConfigBuilder {
                     .map_err(|e| RepartirError::InvalidTask {
                         reason: format!("Failed to build client TLS config: {e}"),
                     })?;
-                config
-                    .dangerous()
-                    .set_certificate_verifier(Arc::new(NoCertificateVerification));
+                config.dangerous().set_certificate_verifier(Arc::new(NoCertificateVerification));
                 config
             };
 
@@ -180,10 +172,7 @@ impl TlsConfigBuilder {
             server_config = Some(Arc::new(config));
         }
 
-        Ok(TlsConfig {
-            client_config,
-            server_config,
-        })
+        Ok(TlsConfig { client_config, server_config })
     }
 }
 
@@ -192,11 +181,10 @@ fn load_certs<P: AsRef<Path>>(path: P) -> Result<Vec<CertificateDer<'static>>> {
     let file = File::open(path.as_ref()).map_err(RepartirError::Io)?;
     let mut reader = BufReader::new(file);
 
-    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut reader)
-        .collect::<std::result::Result<Vec<_>, _>>()
-        .map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to parse certificates: {e}"),
-        })?;
+    let certs: Vec<CertificateDer<'static>> =
+        rustls_pemfile::certs(&mut reader).collect::<std::result::Result<Vec<_>, _>>().map_err(
+            |e| RepartirError::InvalidTask { reason: format!("Failed to parse certificates: {e}") },
+        )?;
 
     Ok(certs)
 }
@@ -308,15 +296,9 @@ ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
 
     fn create_temp_file(content: &str) -> std::path::PathBuf {
         let mut temp_file = std::env::temp_dir();
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        temp_file.push(format!(
-            "repartir_test_{}_{}.pem",
-            std::process::id(),
-            timestamp
-        ));
+        let timestamp =
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        temp_file.push(format!("repartir_test_{}_{}.pem", std::process::id(), timestamp));
 
         let mut file = File::create(&temp_file).unwrap();
         file.write_all(content.as_bytes()).unwrap();
@@ -407,9 +389,7 @@ ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
         // Only cert without key - build should skip (no error, no config)
         let cert_file = create_temp_file(TEST_CERT_PEM);
 
-        let config = TlsConfig::builder()
-            .client_cert(cert_file.to_str().unwrap())
-            .build();
+        let config = TlsConfig::builder().client_cert(cert_file.to_str().unwrap()).build();
 
         std::fs::remove_file(cert_file).ok();
 
@@ -424,9 +404,7 @@ ZxpSqUKmVhsSqUKhZd5l6h+ZxpSqUKmVhsQ=
         // Only key without cert - build should skip
         let key_file = create_temp_file(TEST_KEY_PEM);
 
-        let config = TlsConfig::builder()
-            .server_key(key_file.to_str().unwrap())
-            .build();
+        let config = TlsConfig::builder().server_key(key_file.to_str().unwrap()).build();
 
         std::fs::remove_file(key_file).ok();
 

@@ -80,19 +80,13 @@ impl Message {
     /// Creates a new text message.
     #[must_use]
     pub fn text<S: Into<String>>(content: S) -> Self {
-        Self {
-            data: MessageData::Text(content.into()),
-            metadata: HashMap::new(),
-        }
+        Self { data: MessageData::Text(content.into()), metadata: HashMap::new() }
     }
 
     /// Creates a new binary message.
     #[must_use]
     pub fn bytes(content: Vec<u8>) -> Self {
-        Self {
-            data: MessageData::Bytes(content),
-            metadata: HashMap::new(),
-        }
+        Self { data: MessageData::Bytes(content), metadata: HashMap::new() }
     }
 
     /// Adds metadata to the message.
@@ -110,9 +104,9 @@ impl Message {
     pub fn as_text(&self) -> Result<&str> {
         match &self.data {
             MessageData::Text(s) => Ok(s),
-            MessageData::Bytes(_) => Err(RepartirError::InvalidTask {
-                reason: "Message is not text".to_string(),
-            }),
+            MessageData::Bytes(_) => {
+                Err(RepartirError::InvalidTask { reason: "Message is not text".to_string() })
+            }
         }
     }
 
@@ -184,10 +178,7 @@ impl PubSubChannel {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         info!("Creating PUB/SUB channel with capacity {capacity}");
-        Self {
-            topics: Arc::new(RwLock::new(HashMap::new())),
-            capacity,
-        }
+        Self { topics: Arc::new(RwLock::new(HashMap::new())), capacity }
     }
 
     /// Subscribes to a topic.
@@ -219,17 +210,13 @@ impl PubSubChannel {
         let topics = self.topics.read().await;
 
         if let Some(sender) = topics.get(topic) {
-            let count = sender
-                .send(message)
-                .map_err(|_| RepartirError::InvalidTask {
-                    reason: format!("No active subscribers for topic: {topic}"),
-                })?;
+            let count = sender.send(message).map_err(|_| RepartirError::InvalidTask {
+                reason: format!("No active subscribers for topic: {topic}"),
+            })?;
             debug!("Published message to {count} subscribers on topic '{topic}'");
             Ok(count)
         } else {
-            Err(RepartirError::InvalidTask {
-                reason: format!("Topic does not exist: {topic}"),
-            })
+            Err(RepartirError::InvalidTask { reason: format!("Topic does not exist: {topic}") })
         }
     }
 
@@ -241,9 +228,7 @@ impl PubSubChannel {
     /// Returns the number of subscribers for a specific topic.
     pub async fn subscriber_count(&self, topic: &str) -> usize {
         let topics = self.topics.read().await;
-        topics
-            .get(topic)
-            .map_or(0, broadcast::Sender::receiver_count)
+        topics.get(topic).map_or(0, broadcast::Sender::receiver_count)
     }
 }
 
@@ -294,10 +279,7 @@ impl PushPullChannel {
     pub fn new(capacity: usize) -> Self {
         info!("Creating PUSH/PULL channel with capacity {capacity}");
         let (sender, receiver) = mpsc::channel(capacity);
-        Self {
-            sender,
-            receiver: Arc::new(RwLock::new(receiver)),
-        }
+        Self { sender, receiver: Arc::new(RwLock::new(receiver)) }
     }
 
     /// Pushes a message to the channel.
@@ -306,12 +288,9 @@ impl PushPullChannel {
     ///
     /// Returns an error if the channel is full or closed.
     pub async fn push(&self, message: Message) -> Result<()> {
-        self.sender
-            .send(message)
-            .await
-            .map_err(|_| RepartirError::InvalidTask {
-                reason: "Channel closed or full".to_string(),
-            })?;
+        self.sender.send(message).await.map_err(|_| RepartirError::InvalidTask {
+            reason: "Channel closed or full".to_string(),
+        })?;
         debug!("Message pushed to PUSH/PULL channel");
         Ok(())
     }
@@ -352,9 +331,8 @@ mod tests {
 
     #[test]
     fn test_message_metadata() {
-        let msg = Message::text("test")
-            .with_metadata("key1", "value1")
-            .with_metadata("key2", "value2");
+        let msg =
+            Message::text("test").with_metadata("key1", "value1").with_metadata("key2", "value2");
 
         assert_eq!(msg.get_metadata("key1"), Some("value1"));
         assert_eq!(msg.get_metadata("key2"), Some("value2"));
@@ -367,10 +345,7 @@ mod tests {
         let channel = PubSubChannel::new();
         let mut sub = channel.subscribe("test").await;
 
-        channel
-            .publish("test", Message::text("Hello"))
-            .await
-            .unwrap();
+        channel.publish("test", Message::text("Hello")).await.unwrap();
 
         let msg = sub.recv().await.unwrap();
         assert_eq!(msg.as_text().unwrap(), "Hello");
@@ -384,10 +359,7 @@ mod tests {
 
         assert_eq!(channel.subscriber_count("events").await, 2);
 
-        channel
-            .publish("events", Message::text("Broadcast"))
-            .await
-            .unwrap();
+        channel.publish("events", Message::text("Broadcast")).await.unwrap();
 
         let msg1 = sub1.recv().await.unwrap();
         let msg2 = sub2.recv().await.unwrap();
@@ -402,10 +374,7 @@ mod tests {
         let mut sub1 = channel.subscribe("topic1").await;
         let mut sub2 = channel.subscribe("topic2").await;
 
-        channel
-            .publish("topic1", Message::text("Message 1"))
-            .await
-            .unwrap();
+        channel.publish("topic1", Message::text("Message 1")).await.unwrap();
 
         // sub1 receives, sub2 doesn't
         assert!(sub1.try_recv().is_ok());
@@ -458,10 +427,7 @@ mod tests {
         let channel = PubSubChannel::default();
         let mut sub = channel.subscribe("test").await;
 
-        channel
-            .publish("test", Message::text("Default channel"))
-            .await
-            .unwrap();
+        channel.publish("test", Message::text("Default channel")).await.unwrap();
 
         let msg = sub.recv().await.unwrap();
         assert_eq!(msg.as_text().unwrap(), "Default channel");
@@ -472,9 +438,7 @@ mod tests {
         let channel = PubSubChannel::new();
 
         // Publishing to a non-existent topic should error
-        let result = channel
-            .publish("empty_topic", Message::text("Nobody listening"))
-            .await;
+        let result = channel.publish("empty_topic", Message::text("Nobody listening")).await;
         assert!(result.is_err());
     }
 

@@ -42,11 +42,8 @@ pub fn draw_ui(f: &mut Frame, app: &App) {
 
 /// Render the header bar.
 fn render_header(f: &mut Frame, area: Rect, app: &App) {
-    let title = format!(
-        " REPARTIR JOB FLOW | Nodes: {} | Tasks: {} ",
-        app.nodes.len(),
-        app.queue.total()
-    );
+    let title =
+        format!(" REPARTIR JOB FLOW | Nodes: {} | Tasks: {} ", app.nodes.len(), app.queue.total());
 
     let help_text = "[q]uit [r]efresh [?]help";
 
@@ -57,22 +54,12 @@ fn render_header(f: &mut Frame, area: Rect, app: &App) {
     let spans = if title_len + help_len + 2 <= available {
         let padding = available - title_len - help_len;
         vec![
-            Span::styled(
-                title,
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             Span::raw(" ".repeat(padding)),
             Span::styled(help_text, Style::default().fg(Color::DarkGray)),
         ]
     } else {
-        vec![Span::styled(
-            title,
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )]
+        vec![Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))]
     };
 
     let para = Paragraph::new(Line::from(spans));
@@ -93,11 +80,7 @@ fn render_main(f: &mut Frame, area: Rect, app: &App) {
 /// Render the cluster panel with node statuses.
 fn render_cluster(f: &mut Frame, area: Rect, app: &App) {
     let is_focused = app.focus == Focus::Cluster;
-    let border_color = if is_focused {
-        Color::Yellow
-    } else {
-        Color::White
-    };
+    let border_color = if is_focused { Color::Yellow } else { Color::White };
 
     let block = Block::default()
         .title(" CLUSTER ")
@@ -118,14 +101,11 @@ fn render_cluster(f: &mut Frame, area: Rect, app: &App) {
     let max_nodes = (inner.height / node_height) as usize;
     let visible_nodes = app.nodes.len().min(max_nodes);
 
-    let constraints: Vec<Constraint> = (0..visible_nodes)
-        .map(|_| Constraint::Length(node_height))
-        .collect();
+    let constraints: Vec<Constraint> =
+        (0..visible_nodes).map(|_| Constraint::Length(node_height)).collect();
 
-    let node_areas = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints(constraints)
-        .split(inner);
+    let node_areas =
+        Layout::default().direction(Direction::Vertical).constraints(constraints).split(inner);
 
     for (i, node) in app.nodes.iter().take(visible_nodes).enumerate() {
         let is_selected = matches!(&app.selected, Selection::Node(idx) if *idx == i);
@@ -141,18 +121,10 @@ fn render_node_status(f: &mut Frame, area: Rect, node: &super::model::NodeStatus
         NodeState::Offline => "○",
     };
 
-    let backends_str: String = node
-        .backends
-        .iter()
-        .map(|b| format!("{}", b.backend_type))
-        .collect::<Vec<_>>()
-        .join("+");
+    let backends_str: String =
+        node.backends.iter().map(|b| format!("{}", b.backend_type)).collect::<Vec<_>>().join("+");
 
-    let backend_display = if backends_str.is_empty() {
-        "CPU".to_string()
-    } else {
-        backends_str
-    };
+    let backend_display = if backends_str.is_empty() { "CPU".to_string() } else { backends_str };
 
     let border_style = if selected {
         Style::default().fg(Color::Yellow)
@@ -160,9 +132,7 @@ fn render_node_status(f: &mut Frame, area: Rect, node: &super::model::NodeStatus
         Style::default().fg(state_color(node.state == NodeState::Online))
     };
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(border_style);
+    let block = Block::default().borders(Borders::ALL).border_style(border_style);
 
     let inner = block.inner(area);
     f.render_widget(block, area);
@@ -174,15 +144,9 @@ fn render_node_status(f: &mut Frame, area: Rect, node: &super::model::NodeStatus
                 Style::default().fg(state_color(node.state == NodeState::Online)),
             ),
             Span::raw(" "),
-            Span::styled(
-                truncate(&node.name, 15),
-                Style::default().add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(truncate(&node.name, 15), Style::default().add_modifier(Modifier::BOLD)),
             Span::raw("  "),
-            Span::styled(
-                format!("[{backend_display}]"),
-                Style::default().fg(Color::Cyan),
-            ),
+            Span::styled(format!("[{backend_display}]"), Style::default().fg(Color::Cyan)),
         ]),
         Line::from(vec![
             Span::raw("  CPU: "),
@@ -227,11 +191,7 @@ fn render_queue_and_completions(f: &mut Frame, area: Rect, app: &App) {
 /// Render the task queue panel.
 fn render_queue(f: &mut Frame, area: Rect, app: &App) {
     let is_focused = app.focus == Focus::Queue;
-    let border_color = if is_focused {
-        Color::Yellow
-    } else {
-        Color::White
-    };
+    let border_color = if is_focused { Color::Yellow } else { Color::White };
 
     let block = Block::default()
         .title(" TASK QUEUE ")
@@ -259,20 +219,14 @@ fn render_queue(f: &mut Frame, area: Rect, app: &App) {
         Line::from(Span::raw("")),
         Line::from(vec![
             Span::raw("Priority: "),
-            Span::styled(
-                format!("High:{}", queue.high_priority),
-                Style::default().fg(Color::Red),
-            ),
+            Span::styled(format!("High:{}", queue.high_priority), Style::default().fg(Color::Red)),
             Span::raw(" "),
             Span::styled(
                 format!("Normal:{}", queue.normal_priority),
                 Style::default().fg(Color::Yellow),
             ),
             Span::raw(" "),
-            Span::styled(
-                format!("Low:{}", queue.low_priority),
-                Style::default().fg(Color::Green),
-            ),
+            Span::styled(format!("Low:{}", queue.low_priority), Style::default().fg(Color::Green)),
         ]),
     ];
 
@@ -283,11 +237,7 @@ fn render_queue(f: &mut Frame, area: Rect, app: &App) {
 /// Render the completions panel.
 fn render_completions(f: &mut Frame, area: Rect, app: &App) {
     let is_focused = app.focus == Focus::Completions;
-    let border_color = if is_focused {
-        Color::Yellow
-    } else {
-        Color::White
-    };
+    let border_color = if is_focused { Color::Yellow } else { Color::White };
 
     let block = Block::default()
         .title(" RECENT COMPLETIONS ")
@@ -311,11 +261,8 @@ fn render_completions(f: &mut Frame, area: Rect, app: &App) {
         .enumerate()
         .map(|(i, c)| {
             let is_selected = matches!(&app.selected, Selection::Completion(idx) if *idx == i);
-            let style = if is_selected {
-                Style::default().bg(Color::DarkGray)
-            } else {
-                Style::default()
-            };
+            let style =
+                if is_selected { Style::default().bg(Color::DarkGray) } else { Style::default() };
 
             let indicator = if c.success { "✓" } else { "✗" };
             let indicator_color = success_color(c.success);
@@ -460,10 +407,7 @@ fn render_help_overlay(f: &mut Frame, area: Rect) {
             Span::raw("Toggle help"),
         ]),
         Line::from(""),
-        Line::from(Span::styled(
-            "  Press any key to close",
-            Style::default().fg(Color::DarkGray),
-        )),
+        Line::from(Span::styled("  Press any key to close", Style::default().fg(Color::DarkGray))),
     ];
 
     let para = Paragraph::new(help_text);
@@ -595,9 +539,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("REPARTIR JOB FLOW")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("REPARTIR JOB FLOW").unwrap();
     }
 
     #[test]
@@ -645,11 +587,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("CUDA")
-            .unwrap()
-            .to_contain_text("Metal")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("CUDA").unwrap().to_contain_text("Metal").unwrap();
     }
 
     #[test]
@@ -717,9 +655,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("In-Flight: 8")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("In-Flight: 8").unwrap();
     }
 
     #[test]
@@ -779,9 +715,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("No completions")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("No completions").unwrap();
     }
 
     // =========================================================================
@@ -803,9 +737,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("memory pressure")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("memory pressure").unwrap();
     }
 
     #[test]
@@ -817,9 +749,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("No active alerts")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("No active alerts").unwrap();
     }
 
     // =========================================================================
@@ -995,9 +925,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("Node: linux-rtx4090")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("Node: linux-rtx4090").unwrap();
     }
 
     #[test]
@@ -1023,9 +951,7 @@ mod tests {
         terminal.draw(|f| draw_ui(f, &app)).unwrap();
 
         let frame = TuiFrame::from_buffer(terminal.backend().buffer(), 0);
-        expect_frame(&frame)
-            .to_contain_text("Select a node")
-            .unwrap();
+        expect_frame(&frame).to_contain_text("Select a node").unwrap();
     }
 
     #[test]

@@ -60,26 +60,17 @@ async fn main() -> Result<()> {
     // All subscribers receive the message
     if let Ok(m) = worker1.try_recv() {
         println!("  Worker 1 received: {}", m.as_text()?);
-        println!(
-            "    Priority: {}",
-            m.get_metadata("priority").unwrap_or("none")
-        );
+        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
     }
 
     if let Ok(m) = worker2.try_recv() {
         println!("  Worker 2 received: {}", m.as_text()?);
-        println!(
-            "    Priority: {}",
-            m.get_metadata("priority").unwrap_or("none")
-        );
+        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
     }
 
     if let Ok(m) = worker3.try_recv() {
         println!("  Worker 3 received: {}", m.as_text()?);
-        println!(
-            "    Priority: {}",
-            m.get_metadata("priority").unwrap_or("none")
-        );
+        println!("    Priority: {}", m.get_metadata("priority").unwrap_or("none"));
     }
 
     println!();
@@ -97,12 +88,8 @@ async fn main() -> Result<()> {
     println!();
 
     // Publish to different topics
-    channel
-        .publish("events", Message::text("Task completed: job-123"))
-        .await?;
-    channel
-        .publish("alerts", Message::text("CPU usage above 80%"))
-        .await?;
+    channel.publish("events", Message::text("Task completed: job-123")).await?;
+    channel.publish("alerts", Message::text("CPU usage above 80%")).await?;
 
     // Each subscriber only receives from their topic
     if let Ok(m) = events_sub.try_recv() {

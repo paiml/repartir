@@ -86,12 +86,7 @@ impl From<trueno::TruenoError> for RepartirError {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::disallowed_methods,
-    clippy::panic
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::disallowed_methods, clippy::panic)]
 mod tests {
     use super::*;
 
@@ -106,9 +101,7 @@ mod tests {
 
     #[test]
     fn test_binary_not_found() {
-        let err = RepartirError::BinaryNotFound {
-            path: PathBuf::from("/nonexistent"),
-        };
+        let err = RepartirError::BinaryNotFound { path: PathBuf::from("/nonexistent") };
         assert!(format!("{err}").contains("Binary not found"));
     }
 

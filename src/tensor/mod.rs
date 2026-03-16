@@ -187,20 +187,14 @@ mod tests {
 
     #[test]
     fn test_tensor_executor_creation() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         assert_eq!(executor.backend(), Backend::Cpu);
     }
 
     #[test]
     fn test_tensor_addition() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
         let b = Tensor::from_slice(&[5.0, 6.0, 7.0, 8.0]);
@@ -211,10 +205,7 @@ mod tests {
 
     #[test]
     fn test_tensor_subtraction() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[10.0, 9.0, 8.0, 7.0]);
         let b = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
@@ -225,10 +216,7 @@ mod tests {
 
     #[test]
     fn test_tensor_multiplication() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[2.0, 3.0, 4.0]);
         let b = Tensor::from_slice(&[5.0, 6.0, 7.0]);
@@ -239,10 +227,7 @@ mod tests {
 
     #[test]
     fn test_tensor_division() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[10.0, 20.0, 30.0]);
         let b = Tensor::from_slice(&[2.0, 4.0, 5.0]);
@@ -253,10 +238,7 @@ mod tests {
 
     #[test]
     fn test_tensor_scalar_multiplication() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
 
@@ -266,10 +248,7 @@ mod tests {
 
     #[test]
     fn test_tensor_dot_product() {
-        let executor = TensorExecutor::builder()
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let executor = TensorExecutor::builder().backend(Backend::Cpu).build().unwrap();
 
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0]);
         let b = Tensor::from_slice(&[4.0, 5.0, 6.0]);

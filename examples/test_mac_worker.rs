@@ -16,10 +16,7 @@ async fn main() -> repartir::error::Result<()> {
     let executor = RemoteExecutor::new().await?;
     executor.add_worker("192.168.50.100:9000").await?;
 
-    println!(
-        "Connected! Executor capacity: {} workers",
-        executor.capacity()
-    );
+    println!("Connected! Executor capacity: {} workers", executor.capacity());
 
     // Create a simple task
     let task = Task::builder()

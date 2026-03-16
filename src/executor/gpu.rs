@@ -137,12 +137,7 @@ impl GpuExecutor {
         info!("GPU executor initialized");
         info!("Estimated compute units: {compute_units}");
 
-        Ok(Self {
-            device: Arc::new(device),
-            queue: Arc::new(queue),
-            device_name,
-            compute_units,
-        })
+        Ok(Self { device: Arc::new(device), queue: Arc::new(queue), device_name, compute_units })
     }
 
     /// Returns the GPU device name.
@@ -211,20 +206,15 @@ impl GpuExecutor {
         let start_time = std::time::Instant::now();
 
         // Check if task has shader code
-        let shader_code = task
-            .shader_code()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: format!(
-                    "GPU task {task_id} has no shader code. \
+        let shader_code = task.shader_code().ok_or_else(|| RepartirError::InvalidTask {
+            reason: format!(
+                "GPU task {task_id} has no shader code. \
                      Binary execution is not supported on GPU. \
                      Use .shader_code() to provide WGSL shader source code."
-                ),
-            })?;
+            ),
+        })?;
 
-        debug!(
-            "Task {task_id}: Creating shader module from {} bytes",
-            shader_code.len()
-        );
+        debug!("Task {task_id}: Creating shader module from {} bytes", shader_code.len());
 
         // Convert shader code bytes to string (WGSL format)
         let shader_source =
@@ -233,12 +223,10 @@ impl GpuExecutor {
             })?;
 
         // Create shader module from WGSL source
-        let shader_module = self
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some(&format!("Task {task_id} Shader")),
-                source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(shader_source)),
-            });
+        let shader_module = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some(&format!("Task {task_id} Shader")),
+            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(shader_source)),
+        });
 
         // Create input buffers and upload data
         let input_buffers = self.create_input_buffers(&task);
@@ -255,31 +243,26 @@ impl GpuExecutor {
             self.create_bind_group(&bind_group_layout, &input_buffers, &output_buffers);
 
         // Create compute pipeline
-        let pipeline_layout = self
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some(&format!("Task {task_id} Pipeline Layout")),
-                bind_group_layouts: &[&bind_group_layout],
-                push_constant_ranges: &[],
-            });
+        let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some(&format!("Task {task_id} Pipeline Layout")),
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        });
 
         let compute_pipeline =
-            self.device
-                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                    label: Some(&format!("Task {task_id} Pipeline")),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: Some("main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    cache: None,
-                });
+            self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some(&format!("Task {task_id} Pipeline")),
+                layout: Some(&pipeline_layout),
+                module: &shader_module,
+                entry_point: Some("main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            });
 
         // Create command encoder
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some(&format!("Task {task_id} Encoder")),
-            });
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some(&format!("Task {task_id} Encoder")),
+        });
 
         // Dispatch compute shader
         {
@@ -323,12 +306,11 @@ impl GpuExecutor {
             .iter()
             .enumerate()
             .map(|(i, data)| {
-                self.device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some(&format!("Task {} Input Buffer {i}", task.id())),
-                        contents: data,
-                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    })
+                self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some(&format!("Task {} Input Buffer {i}", task.id())),
+                    contents: data,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                })
             })
             .collect()
     }
@@ -388,11 +370,10 @@ impl GpuExecutor {
             });
         }
 
-        self.device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Compute Bind Group Layout"),
-                entries: &entries,
-            })
+        self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Compute Bind Group Layout"),
+            entries: &entries,
+        })
     }
 
     /// Creates bind group binding buffers.
@@ -444,21 +425,17 @@ impl GpuExecutor {
             });
 
             // Copy from GPU buffer to staging buffer
-            let mut encoder = self
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Readback Encoder"),
-                });
+            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Readback Encoder"),
+            });
             encoder.copy_buffer_to_buffer(buffer, 0, &staging_buffer, 0, size);
             self.queue.submit(std::iter::once(encoder.finish()));
 
             // Map staging buffer and read data
             let (sender, receiver) = futures::channel::oneshot::channel();
-            staging_buffer
-                .slice(..)
-                .map_async(wgpu::MapMode::Read, move |result| {
-                    let _ = sender.send(result);
-                });
+            staging_buffer.slice(..).map_async(wgpu::MapMode::Read, move |result| {
+                let _ = sender.send(result);
+            });
 
             // Poll device until mapping completes
             self.device.poll(wgpu::Maintain::Wait);

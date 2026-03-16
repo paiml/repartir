@@ -163,19 +163,12 @@ impl CheckpointManager {
             Field::new("checkpoint_id", DataType::Utf8, false),
             Field::new("task_id", DataType::Utf8, false),
             Field::new("iteration", DataType::UInt64, false),
-            Field::new(
-                "timestamp_micros",
-                DataType::Timestamp(TimeUnit::Microsecond, None),
-                false,
-            ),
+            Field::new("timestamp_micros", DataType::Timestamp(TimeUnit::Microsecond, None), false),
             Field::new("data", DataType::Binary, false),
         ]));
 
         // Convert SystemTime to microseconds since UNIX epoch
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_possible_wrap
-        )]
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let timestamp_micros = state
             .timestamp
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -216,16 +209,12 @@ impl CheckpointManager {
             .build();
 
         let mut writer = ArrowWriter::try_new(file, schema, Some(props)).map_err(|e| {
-            RepartirError::InvalidTask {
-                reason: format!("Failed to create parquet writer: {e}"),
-            }
+            RepartirError::InvalidTask { reason: format!("Failed to create parquet writer: {e}") }
         })?;
 
-        writer
-            .write(&batch)
-            .map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to write parquet batch: {e}"),
-            })?;
+        writer.write(&batch).map_err(|e| RepartirError::InvalidTask {
+            reason: format!("Failed to write parquet batch: {e}"),
+        })?;
 
         writer.close().map_err(|e| RepartirError::InvalidTask {
             reason: format!("Failed to close parquet writer: {e}"),
@@ -287,8 +276,7 @@ impl CheckpointManager {
             .filter_map(std::result::Result::ok)
             .filter(|entry| {
                 let path = entry.path();
-                path.extension()
-                    .is_some_and(|ext| ext == "parquet" || ext == "json")
+                path.extension().is_some_and(|ext| ext == "parquet" || ext == "json")
             })
             .collect();
 
@@ -300,19 +288,14 @@ impl CheckpointManager {
         checkpoints.sort_by_key(std::fs::DirEntry::path);
 
         // Read most recent checkpoint
-        let latest = checkpoints
-            .last()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "No checkpoints found".to_string(),
-            })?;
+        let latest = checkpoints.last().ok_or_else(|| RepartirError::InvalidTask {
+            reason: "No checkpoints found".to_string(),
+        })?;
 
         let latest_path = latest.path();
-        let extension = latest_path
-            .extension()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid checkpoint file extension".to_string(),
-            })?;
+        let extension = latest_path.extension().and_then(|s| s.to_str()).ok_or_else(|| {
+            RepartirError::InvalidTask { reason: "Invalid checkpoint file extension".to_string() }
+        })?;
 
         // Read based on file format
         match extension {
@@ -348,10 +331,9 @@ impl CheckpointManager {
             reason: format!("Failed to open parquet file: {e}"),
         })?;
 
-        let builder =
-            ArrowReaderBuilder::try_new(file).map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to create parquet reader: {e}"),
-            })?;
+        let builder = ArrowReaderBuilder::try_new(file).map_err(|e| {
+            RepartirError::InvalidTask { reason: format!("Failed to create parquet reader: {e}") }
+        })?;
 
         let mut reader = builder.build().map_err(|e| RepartirError::InvalidTask {
             reason: format!("Failed to build parquet reader: {e}"),
@@ -360,51 +342,38 @@ impl CheckpointManager {
         // Read first batch (checkpoints are single-row)
         let batch = reader
             .next()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Empty parquet file".to_string(),
-            })?
+            .ok_or_else(|| RepartirError::InvalidTask { reason: "Empty parquet file".to_string() })?
             .map_err(|e| RepartirError::InvalidTask {
                 reason: format!("Failed to read parquet batch: {e}"),
             })?;
 
         // Extract fields
-        let task_id_array = batch
-            .column(1)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid task_id column type".to_string(),
+        let task_id_array =
+            batch.column(1).as_any().downcast_ref::<StringArray>().ok_or_else(|| {
+                RepartirError::InvalidTask { reason: "Invalid task_id column type".to_string() }
             })?;
 
-        let iteration_array = batch
-            .column(2)
-            .as_any()
-            .downcast_ref::<UInt64Array>()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid iteration column type".to_string(),
+        let iteration_array =
+            batch.column(2).as_any().downcast_ref::<UInt64Array>().ok_or_else(|| {
+                RepartirError::InvalidTask { reason: "Invalid iteration column type".to_string() }
             })?;
 
-        let timestamp_array = batch
-            .column(3)
-            .as_any()
-            .downcast_ref::<TimestampMicrosecondArray>()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid timestamp column type".to_string(),
-            })?;
+        let timestamp_array =
+            batch.column(3).as_any().downcast_ref::<TimestampMicrosecondArray>().ok_or_else(
+                || RepartirError::InvalidTask {
+                    reason: "Invalid timestamp column type".to_string(),
+                },
+            )?;
 
-        let data_array = batch
-            .column(4)
-            .as_any()
-            .downcast_ref::<BinaryArray>()
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid data column type".to_string(),
+        let data_array =
+            batch.column(4).as_any().downcast_ref::<BinaryArray>().ok_or_else(|| {
+                RepartirError::InvalidTask { reason: "Invalid data column type".to_string() }
             })?;
 
         // Convert to TaskState
-        let task_id =
-            Uuid::parse_str(task_id_array.value(0)).map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to parse task_id: {e}"),
-            })?;
+        let task_id = Uuid::parse_str(task_id_array.value(0)).map_err(|e| {
+            RepartirError::InvalidTask { reason: format!("Failed to parse task_id: {e}") }
+        })?;
 
         let iteration = iteration_array.value(0);
 
@@ -415,12 +384,7 @@ impl CheckpointManager {
 
         let data = data_array.value(0).to_vec();
 
-        Ok(Some(TaskState {
-            task_id,
-            iteration,
-            data,
-            timestamp,
-        }))
+        Ok(Some(TaskState { task_id, iteration, data, timestamp }))
     }
 
     /// List all checkpoints for a task (v2.0: supports Parquet and JSON)
@@ -469,9 +433,8 @@ impl CheckpointManager {
                     // Read Parquet metadata
                     if let Some(state) = self.read_parquet(&path)? {
                         #[allow(clippy::cast_possible_truncation)]
-                        let size_bytes = std::fs::metadata(&path)
-                            .map(|m| m.len() as usize)
-                            .unwrap_or(0);
+                        let size_bytes =
+                            std::fs::metadata(&path).map(|m| m.len() as usize).unwrap_or(0);
 
                         metadata.push(CheckpointMetadata {
                             checkpoint_id,
@@ -527,11 +490,9 @@ impl CheckpointManager {
     pub async fn cleanup(&self, retention_days: u32) -> Result<usize> {
         let retention_duration =
             std::time::Duration::from_secs(u64::from(retention_days) * 24 * 3600);
-        let cutoff_time = SystemTime::now()
-            .checked_sub(retention_duration)
-            .ok_or_else(|| RepartirError::InvalidTask {
-                reason: "Invalid retention duration".to_string(),
-            })?;
+        let cutoff_time = SystemTime::now().checked_sub(retention_duration).ok_or_else(|| {
+            RepartirError::InvalidTask { reason: "Invalid retention duration".to_string() }
+        })?;
 
         let mut deleted_count = 0;
 
@@ -690,19 +651,13 @@ mod tests {
             task_id,
             iteration: 1,
             data: vec![1],
-            timestamp: SystemTime::now()
-                .checked_sub(Duration::from_secs(10 * 24 * 3600))
-                .unwrap(),
+            timestamp: SystemTime::now().checked_sub(Duration::from_secs(10 * 24 * 3600)).unwrap(),
         };
         manager.checkpoint(task_id, &old_state).await.unwrap();
 
         // Create checkpoint with recent timestamp
-        let new_state = TaskState {
-            task_id,
-            iteration: 2,
-            data: vec![2],
-            timestamp: SystemTime::now(),
-        };
+        let new_state =
+            TaskState { task_id, iteration: 2, data: vec![2], timestamp: SystemTime::now() };
         manager.checkpoint(task_id, &new_state).await.unwrap();
 
         // Cleanup checkpoints older than 7 days

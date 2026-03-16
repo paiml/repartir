@@ -161,19 +161,11 @@ async fn demo_tls_config() -> Result<()> {
             println!();
             println!(
                 "  Client: {}",
-                if tls_config.client_config().is_ok() {
-                    "✓ Enabled"
-                } else {
-                    "✗ Disabled"
-                }
+                if tls_config.client_config().is_ok() { "✓ Enabled" } else { "✗ Disabled" }
             );
             println!(
                 "  Server: {}",
-                if tls_config.server_config().is_ok() {
-                    "✓ Enabled"
-                } else {
-                    "✗ Disabled"
-                }
+                if tls_config.server_config().is_ok() { "✓ Enabled" } else { "✗ Disabled" }
             );
             println!();
             println!("  Security:");
@@ -239,21 +231,13 @@ async fn demo_priority_scheduling() -> Result<()> {
         let high_result = pool.submit(high_task).await?;
         let duration = start.elapsed();
 
-        println!(
-            "  ✓ High:   {} ({:?})",
-            high_result.stdout_str()?.trim(),
-            high_result.duration()
-        );
+        println!("  ✓ High:   {} ({:?})", high_result.stdout_str()?.trim(), high_result.duration());
         println!(
             "  ✓ Normal: {} ({:?})",
             normal_result.stdout_str()?.trim(),
             normal_result.duration()
         );
-        println!(
-            "  ✓ Low:    {} ({:?})",
-            low_result.stdout_str()?.trim(),
-            low_result.duration()
-        );
+        println!("  ✓ Low:    {} ({:?})", low_result.stdout_str()?.trim(), low_result.duration());
         println!();
         println!("  Total execution: {:?}", duration);
     }
@@ -326,11 +310,8 @@ async fn demo_fault_tolerance() -> Result<()> {
     #[cfg(unix)]
     {
         // Test successful task
-        let success_task = Task::builder()
-            .binary("/bin/echo")
-            .arg("Success!")
-            .backend(Backend::Cpu)
-            .build()?;
+        let success_task =
+            Task::builder().binary("/bin/echo").arg("Success!").backend(Backend::Cpu).build()?;
 
         let result = pool.submit(success_task).await?;
         println!("  ✓ Successful task:");
@@ -362,11 +343,7 @@ async fn demo_fault_tolerance() -> Result<()> {
 
 fn section_header(title: &str) {
     println!("┌─────────────────────────────────────────────────────────────┐");
-    println!(
-        "│ {} {}",
-        title,
-        " ".repeat(60usize.saturating_sub(title.len()))
-    );
+    println!("│ {} {}", title, " ".repeat(60usize.saturating_sub(title.len())));
     println!("└─────────────────────────────────────────────────────────────┘");
     println!();
 }

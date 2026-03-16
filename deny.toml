@@ -2,12 +2,16 @@
 # Per Iron Lotus Framework Section 11.2
 
 [advisories]
-ignore = []
+ignore = [
+    # Transitive deps from ratatui/jugar-probar — no direct upgrade path
+    "RUSTSEC-2024-0384",  # instant (unmaintained) — via notify-types
+    "RUSTSEC-2026-0002",  # lru (unsound IterMut) — via ratatui, upgrade blocked
+    "RUSTSEC-2024-0436",  # paste (unmaintained) — via ratatui/rav1e
+]
 
 [licenses]
 # Only allow approved open-source licenses (no copyleft in sovereign stack)
-unlicensed = "deny"
-
+# Note: unlicensed crates are denied by default in cargo-deny >=0.15
 allow = [
     "MIT",
     "Apache-2.0",

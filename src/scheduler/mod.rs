@@ -159,10 +159,7 @@ impl Scheduler {
                 let affinity = self.calculate_affinity(task.data_dependencies()).await;
                 if !affinity.is_empty() {
                     metrics.tasks_with_locality += 1;
-                    debug!(
-                        "Task {task_id} has locality: {} workers with data",
-                        affinity.len()
-                    );
+                    debug!("Task {task_id} has locality: {} workers with data", affinity.len());
                 }
             }
         }
@@ -171,9 +168,7 @@ impl Scheduler {
             let mut queue = self.queue.write().await;
 
             if queue.len() >= self.max_queue_size {
-                return Err(RepartirError::QueueFull {
-                    capacity: self.max_queue_size,
-                });
+                return Err(RepartirError::QueueFull { capacity: self.max_queue_size });
             }
 
             debug!("Scheduling task {task_id} with priority {task_priority:?}");
@@ -199,10 +194,7 @@ impl Scheduler {
         let counts = self.data_tracker.locate_data_batch(data_keys).await;
         let total = data_keys.len() as f64;
 
-        counts
-            .into_iter()
-            .map(|(worker, count)| (worker, count as f64 / total))
-            .collect()
+        counts.into_iter().map(|(worker, count)| (worker, count as f64 / total)).collect()
     }
 
     /// Submits a task with explicit worker affinity preferences (v2.0).
@@ -234,9 +226,7 @@ impl Scheduler {
         let preferred_worker = affinity
             .into_iter()
             .max_by(|(_, score_a), (_, score_b)| {
-                score_a
-                    .partial_cmp(score_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                score_a.partial_cmp(score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|(worker, _)| worker);
 
@@ -378,9 +368,7 @@ impl DataLocationTracker {
     /// Creates a new data location tracker.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            locations: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { locations: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// Records that a worker has a specific data item.
@@ -393,10 +381,7 @@ impl DataLocationTracker {
         let key = data_key.into();
         let mut locations = self.locations.write().await;
 
-        locations
-            .entry(key.clone())
-            .or_insert_with(HashSet::new)
-            .insert(worker_id);
+        locations.entry(key.clone()).or_insert_with(HashSet::new).insert(worker_id);
 
         debug!("Tracked data '{}' on worker {:?}", key, worker_id);
     }
@@ -413,10 +398,7 @@ impl DataLocationTracker {
     pub async fn locate_data(&self, data_key: &str) -> Vec<WorkerId> {
         let locations = self.locations.read().await;
 
-        locations
-            .get(data_key)
-            .map(|workers| workers.iter().copied().collect())
-            .unwrap_or_default()
+        locations.get(data_key).map(|workers| workers.iter().copied().collect()).unwrap_or_default()
     }
 
     /// Finds all workers that have any of the specified data items.
@@ -481,10 +463,7 @@ impl DataLocationTracker {
         });
 
         if removed_count > 0 {
-            info!(
-                "Removed worker {:?} from {} data items",
-                worker_id, removed_count
-            );
+            info!("Removed worker {:?} from {} data items", worker_id, removed_count);
         }
 
         removed_count
@@ -509,12 +488,7 @@ impl Default for DataLocationTracker {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::disallowed_methods,
-    clippy::float_cmp
-)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::disallowed_methods, clippy::float_cmp)]
 mod tests {
     use super::*;
     use crate::task::{Backend, Priority};
@@ -524,12 +498,8 @@ mod tests {
     async fn test_scheduler_submit_and_next() {
         let scheduler = Scheduler::new();
 
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .arg("test")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/bin/echo").arg("test").backend(Backend::Cpu).build().unwrap();
 
         let task_id = scheduler.submit(task).await.unwrap();
         assert_eq!(scheduler.pending_count().await, 1);
@@ -588,26 +558,14 @@ mod tests {
     async fn test_scheduler_queue_full() {
         let scheduler = Scheduler::with_capacity(2);
 
-        let task1 = Task::builder()
-            .binary("/bin/echo")
-            .arg("1")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task1 =
+            Task::builder().binary("/bin/echo").arg("1").backend(Backend::Cpu).build().unwrap();
 
-        let task2 = Task::builder()
-            .binary("/bin/echo")
-            .arg("2")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task2 =
+            Task::builder().binary("/bin/echo").arg("2").backend(Backend::Cpu).build().unwrap();
 
-        let task3 = Task::builder()
-            .binary("/bin/echo")
-            .arg("3")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task3 =
+            Task::builder().binary("/bin/echo").arg("3").backend(Backend::Cpu).build().unwrap();
 
         assert!(scheduler.submit(task1).await.is_ok());
         assert!(scheduler.submit(task2).await.is_ok());
@@ -615,10 +573,7 @@ mod tests {
         // Third task should fail (queue full)
         let result = scheduler.submit(task3).await;
         assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            RepartirError::QueueFull { .. }
-        ));
+        assert!(matches!(result.unwrap_err(), RepartirError::QueueFull { .. }));
     }
 
     #[tokio::test]
@@ -650,12 +605,8 @@ mod tests {
     async fn test_scheduler_clear() {
         let scheduler = Scheduler::new();
 
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .arg("test")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/bin/echo").arg("test").backend(Backend::Cpu).build().unwrap();
 
         scheduler.submit(task).await.unwrap();
         assert_eq!(scheduler.pending_count().await, 1);
@@ -772,11 +723,7 @@ mod tests {
         tracker.track_data("batch_1", worker3).await;
 
         // Batch query
-        let data_keys = vec![
-            "batch_1".to_string(),
-            "batch_2".to_string(),
-            "batch_3".to_string(),
-        ];
+        let data_keys = vec!["batch_1".to_string(), "batch_2".to_string(), "batch_3".to_string()];
 
         let counts = tracker.locate_data_batch(&data_keys).await;
 
@@ -901,12 +848,8 @@ mod tests {
         let scheduler = Scheduler::new();
 
         // Task without dependencies
-        let task1 = Task::builder()
-            .binary("/bin/echo")
-            .arg("test1")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task1 =
+            Task::builder().binary("/bin/echo").arg("test1").backend(Backend::Cpu).build().unwrap();
 
         scheduler.submit(task1).await.unwrap();
 
@@ -965,17 +908,11 @@ mod tests {
         affinity.insert(worker1, 0.3);
         affinity.insert(worker2, 0.8);
 
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .arg("test")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/bin/echo").arg("test").backend(Backend::Cpu).build().unwrap();
 
-        let (task_id, preferred_worker) = scheduler
-            .submit_with_affinity(task, affinity)
-            .await
-            .unwrap();
+        let (task_id, preferred_worker) =
+            scheduler.submit_with_affinity(task, affinity).await.unwrap();
 
         assert!(task_id != TaskId::default());
         assert_eq!(preferred_worker, Some(worker2)); // Higher affinity
@@ -1063,18 +1000,11 @@ mod tests {
     async fn test_scheduler_affinity_empty_dependencies() {
         let scheduler = Scheduler::new();
 
-        let task = Task::builder()
-            .binary("/bin/echo")
-            .arg("test")
-            .backend(Backend::Cpu)
-            .build()
-            .unwrap();
+        let task =
+            Task::builder().binary("/bin/echo").arg("test").backend(Backend::Cpu).build().unwrap();
 
         let affinity = HashMap::new();
-        let (_, preferred_worker) = scheduler
-            .submit_with_affinity(task, affinity)
-            .await
-            .unwrap();
+        let (_, preferred_worker) = scheduler.submit_with_affinity(task, affinity).await.unwrap();
 
         assert_eq!(preferred_worker, None); // No affinity, no preference
     }

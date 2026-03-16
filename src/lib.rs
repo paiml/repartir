@@ -281,10 +281,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pool_submit_task() {
-        let pool = Pool::builder()
-            .cpu_workers(2)
-            .build()
-            .expect("Pool build should succeed");
+        let pool = Pool::builder().cpu_workers(2).build().expect("Pool build should succeed");
 
         #[cfg(unix)]
         {
@@ -300,13 +297,7 @@ mod tests {
 
             let exec_result = result.expect("Task execution should succeed");
             assert!(exec_result.is_success());
-            assert_eq!(
-                exec_result
-                    .stdout_str()
-                    .expect("stdout should be UTF-8")
-                    .trim(),
-                "test"
-            );
+            assert_eq!(exec_result.stdout_str().expect("stdout should be UTF-8").trim(), "test");
         }
 
         pool.shutdown().await;

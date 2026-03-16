@@ -27,11 +27,7 @@ pub fn safe_pct(used: f64, total: f64) -> f64 {
 /// Calculate bar width safely, preventing overflow.
 #[inline]
 #[must_use]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
-)]
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn safe_bar(pct: f64, max_width: usize) -> usize {
     if pct.is_nan() || pct.is_infinite() || pct < 0.0 || max_width == 0 {
         return 0;
@@ -288,32 +284,20 @@ mod tests {
 
     #[test]
     fn test_format_duration_ms() {
-        assert_eq!(
-            format_duration(std::time::Duration::from_millis(45)),
-            "45ms"
-        );
-        assert_eq!(
-            format_duration(std::time::Duration::from_millis(999)),
-            "999ms"
-        );
+        assert_eq!(format_duration(std::time::Duration::from_millis(45)), "45ms");
+        assert_eq!(format_duration(std::time::Duration::from_millis(999)), "999ms");
     }
 
     #[test]
     fn test_format_duration_seconds() {
-        assert_eq!(
-            format_duration(std::time::Duration::from_millis(1500)),
-            "1.5s"
-        );
+        assert_eq!(format_duration(std::time::Duration::from_millis(1500)), "1.5s");
         assert_eq!(format_duration(std::time::Duration::from_secs(30)), "30.0s");
     }
 
     #[test]
     fn test_format_duration_minutes() {
         assert_eq!(format_duration(std::time::Duration::from_secs(90)), "1m30s");
-        assert_eq!(
-            format_duration(std::time::Duration::from_secs(3600)),
-            "60m0s"
-        );
+        assert_eq!(format_duration(std::time::Duration::from_secs(3600)), "60m0s");
     }
 
     #[test]

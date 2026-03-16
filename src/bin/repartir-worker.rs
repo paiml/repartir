@@ -158,21 +158,14 @@ async fn main() -> Result<()> {
 
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
-    let bind_addr = if args.len() > 1 {
-        &args[1]
-    } else {
-        "0.0.0.0:9000"
-    };
+    let bind_addr = if args.len() > 1 { &args[1] } else { "0.0.0.0:9000" };
 
     info!("Repartir Remote Worker v1.1");
     info!("Binding to {bind_addr}");
 
     // Create CPU executor
     let executor = Arc::new(CpuExecutor::new());
-    info!(
-        "CPU executor initialized with {} cores",
-        executor.capacity()
-    );
+    info!("CPU executor initialized with {} cores", executor.capacity());
 
     // Listen for connections
     let listener = TcpListener::bind(bind_addr).await.map_err(|e| {
