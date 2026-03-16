@@ -1,7 +1,12 @@
 //! MicroVM Executor
 //!
-//! Hardware-isolated task execution using pepita's KVM-based MicroVMs.
+//! Hardware-isolated task execution using pepita's KVM-based `MicroVMs`.
 //! Provides Docker/Lambda-like isolation with sub-100ms cold start.
+#![allow(
+    clippy::doc_markdown,
+    clippy::missing_errors_doc,
+    clippy::cast_precision_loss
+)]
 //!
 //! ## Example
 //!
@@ -126,7 +131,7 @@ impl MicroVmExecutorConfigBuilder {
 
     /// Set VM idle timeout
     #[must_use]
-    pub fn idle_timeout(mut self, timeout: Duration) -> Self {
+    pub const fn idle_timeout(mut self, timeout: Duration) -> Self {
         self.config.idle_timeout = timeout;
         self
     }
@@ -316,6 +321,7 @@ impl MicroVmExecutor {
     }
 
     /// Pre-warm the VM pool
+    #[allow(clippy::significant_drop_tightening)]
     fn warm_pool(&self) -> Result<()> {
         let mut instances = self
             .instances
@@ -415,6 +421,12 @@ impl MicroVmExecutor {
     }
 
     /// Execute a task in a MicroVM
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the executor is not available, VM acquisition fails,
+    /// or task execution fails.
+    #[allow(clippy::unused_async)]
     pub async fn execute(&self, task: Task) -> Result<ExecutionResult> {
         if !self.is_available() {
             return Err(RepartirError::ExecutionFailed {
@@ -445,18 +457,18 @@ impl MicroVmExecutor {
             ExitReason::TripleFault | ExitReason::InternalError => (
                 false,
                 Vec::new(),
-                format!("VM error: {:?}", exit_reason).into_bytes(),
+                format!("VM error: {exit_reason:?}").into_bytes(),
             ),
             _ => (
                 true,
-                format!("Exit: {:?}", exit_reason).into_bytes(),
+                format!("Exit: {exit_reason:?}").into_bytes(),
                 Vec::new(),
             ),
         };
 
         Ok(ExecutionResult::new(
             task.id(),
-            if success { 0 } else { 1 },
+            i32::from(!success),
             stdout,
             stderr,
             duration,
@@ -570,6 +582,15 @@ impl MicroVmMetrics {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::panic
+)]
 mod tests {
     use super::*;
     use crate::task::Backend;

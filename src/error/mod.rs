@@ -81,12 +81,17 @@ pub enum RepartirError {
 #[cfg(feature = "tensor")]
 impl From<trueno::TruenoError> for RepartirError {
     fn from(err: trueno::TruenoError) -> Self {
-        RepartirError::Tensor(err.to_string())
+        Self::Tensor(err.to_string())
     }
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::panic
+)]
 mod tests {
     use super::*;
 

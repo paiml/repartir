@@ -593,7 +593,16 @@ impl App {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    unused_must_use,
+    clippy::panic
+)]
 mod tests {
     use super::*;
 
@@ -1047,7 +1056,7 @@ mod tests {
 
         assert_eq!(history.gpu_history.len(), 1);
         // GPU utilization should be recorded
-        assert!(history.gpu_history[0].len() > 0);
+        assert!(!history.gpu_history[0].is_empty());
     }
 
     #[test]
@@ -1109,7 +1118,7 @@ mod tests {
                 ..Default::default()
             };
             let util = queue.utilization_pct();
-            prop_assert!(util >= 0.0 && util <= 100.0);
+            prop_assert!((0.0..=100.0).contains(&util));
         }
 
         #[test]

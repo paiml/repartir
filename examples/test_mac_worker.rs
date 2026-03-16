@@ -1,6 +1,6 @@
 //! Test remote worker on Mac Pro
 //!
-//! Run with: cargo run --release --features remote --example test_mac_worker
+//! Run with: `cargo run --release --features remote --example test_mac_worker`
 
 use repartir::executor::remote::RemoteExecutor;
 use repartir::executor::Executor;

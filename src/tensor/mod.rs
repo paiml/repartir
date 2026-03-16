@@ -28,8 +28,7 @@ pub type Tensor = trueno::Vector<f32>;
 /// # #[cfg(feature = "tensor")]
 /// # use repartir::task::Backend;
 /// # #[cfg(feature = "tensor")]
-/// # #[tokio::main]
-/// # async fn main() -> repartir::error::Result<()> {
+/// # fn main() -> repartir::error::Result<()> {
 /// let executor = TensorExecutor::builder()
 ///     .backend(Backend::Cpu)
 ///     .build()?;
@@ -38,7 +37,7 @@ pub type Tensor = trueno::Vector<f32>;
 /// let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
 /// let b = Tensor::from_slice(&[5.0, 6.0, 7.0, 8.0]);
 ///
-/// let result = executor.add(&a, &b).await?;
+/// let result = executor.add(&a, &b)?;
 /// println!("Result: {:?}", result.as_slice());
 /// # Ok(())
 /// # }
@@ -72,8 +71,7 @@ impl TensorExecutor {
     /// # #[cfg(feature = "tensor")]
     /// # use repartir::task::Backend;
     /// # #[cfg(feature = "tensor")]
-    /// # #[tokio::main]
-    /// # async fn main() -> repartir::error::Result<()> {
+    /// # fn main() -> repartir::error::Result<()> {
     /// let executor = TensorExecutor::builder()
     ///     .backend(Backend::Cpu)
     ///     .build()?;
@@ -81,12 +79,12 @@ impl TensorExecutor {
     /// let a = Tensor::from_slice(&[1.0, 2.0, 3.0]);
     /// let b = Tensor::from_slice(&[4.0, 5.0, 6.0]);
     ///
-    /// let result = executor.add(&a, &b).await?;
+    /// let result = executor.add(&a, &b)?;
     /// assert_eq!(result.as_slice(), &[5.0, 7.0, 9.0]);
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn add(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    pub fn add(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         // trueno provides SIMD-optimized operations
         a.add(b).map_err(Into::into)
     }
@@ -96,7 +94,7 @@ impl TensorExecutor {
     /// # Errors
     ///
     /// Returns an error if tensor shapes don't match.
-    pub async fn sub(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    pub fn sub(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         a.sub(b).map_err(Into::into)
     }
 
@@ -105,7 +103,7 @@ impl TensorExecutor {
     /// # Errors
     ///
     /// Returns an error if tensor shapes don't match.
-    pub async fn mul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    pub fn mul(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         a.mul(b).map_err(Into::into)
     }
 
@@ -114,7 +112,7 @@ impl TensorExecutor {
     /// # Errors
     ///
     /// Returns an error if tensor shapes don't match or division by zero.
-    pub async fn div(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
+    pub fn div(&self, a: &Tensor, b: &Tensor) -> Result<Tensor> {
         a.div(b).map_err(Into::into)
     }
 
@@ -125,7 +123,7 @@ impl TensorExecutor {
     /// # Errors
     ///
     /// Returns an error if tensor shapes are incompatible for dot product.
-    pub async fn dot(&self, a: &Tensor, b: &Tensor) -> Result<f32> {
+    pub fn dot(&self, a: &Tensor, b: &Tensor) -> Result<f32> {
         a.dot(b).map_err(Into::into)
     }
 
@@ -136,7 +134,7 @@ impl TensorExecutor {
     /// # Errors
     ///
     /// Returns an error if the operation fails.
-    pub async fn scalar_mul(&self, tensor: &Tensor, scalar: f32) -> Result<Tensor> {
+    pub fn scalar_mul(&self, tensor: &Tensor, scalar: f32) -> Result<Tensor> {
         // Manually implement scalar multiplication
         let data: Vec<f32> = tensor.as_slice().iter().map(|&x| x * scalar).collect();
         Ok(Tensor::from_vec(data))
@@ -177,11 +175,18 @@ impl TensorExecutorBuilder {
 }
 
 #[cfg(all(test, feature = "tensor"))]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss
+)]
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_tensor_executor_creation() {
+    #[test]
+    fn test_tensor_executor_creation() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -190,8 +195,8 @@ mod tests {
         assert_eq!(executor.backend(), Backend::Cpu);
     }
 
-    #[tokio::test]
-    async fn test_tensor_addition() {
+    #[test]
+    fn test_tensor_addition() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -200,12 +205,12 @@ mod tests {
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
         let b = Tensor::from_slice(&[5.0, 6.0, 7.0, 8.0]);
 
-        let result = executor.add(&a, &b).await.unwrap();
+        let result = executor.add(&a, &b).unwrap();
         assert_eq!(result.as_slice(), &[6.0, 8.0, 10.0, 12.0]);
     }
 
-    #[tokio::test]
-    async fn test_tensor_subtraction() {
+    #[test]
+    fn test_tensor_subtraction() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -214,12 +219,12 @@ mod tests {
         let a = Tensor::from_slice(&[10.0, 9.0, 8.0, 7.0]);
         let b = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
 
-        let result = executor.sub(&a, &b).await.unwrap();
+        let result = executor.sub(&a, &b).unwrap();
         assert_eq!(result.as_slice(), &[9.0, 7.0, 5.0, 3.0]);
     }
 
-    #[tokio::test]
-    async fn test_tensor_multiplication() {
+    #[test]
+    fn test_tensor_multiplication() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -228,12 +233,12 @@ mod tests {
         let a = Tensor::from_slice(&[2.0, 3.0, 4.0]);
         let b = Tensor::from_slice(&[5.0, 6.0, 7.0]);
 
-        let result = executor.mul(&a, &b).await.unwrap();
+        let result = executor.mul(&a, &b).unwrap();
         assert_eq!(result.as_slice(), &[10.0, 18.0, 28.0]);
     }
 
-    #[tokio::test]
-    async fn test_tensor_division() {
+    #[test]
+    fn test_tensor_division() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -242,12 +247,12 @@ mod tests {
         let a = Tensor::from_slice(&[10.0, 20.0, 30.0]);
         let b = Tensor::from_slice(&[2.0, 4.0, 5.0]);
 
-        let result = executor.div(&a, &b).await.unwrap();
+        let result = executor.div(&a, &b).unwrap();
         assert_eq!(result.as_slice(), &[5.0, 5.0, 6.0]);
     }
 
-    #[tokio::test]
-    async fn test_tensor_scalar_multiplication() {
+    #[test]
+    fn test_tensor_scalar_multiplication() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -255,12 +260,12 @@ mod tests {
 
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0]);
 
-        let result = executor.scalar_mul(&a, 2.5).await.unwrap();
+        let result = executor.scalar_mul(&a, 2.5).unwrap();
         assert_eq!(result.as_slice(), &[2.5, 5.0, 7.5, 10.0]);
     }
 
-    #[tokio::test]
-    async fn test_tensor_dot_product() {
+    #[test]
+    fn test_tensor_dot_product() {
         let executor = TensorExecutor::builder()
             .backend(Backend::Cpu)
             .build()
@@ -269,13 +274,13 @@ mod tests {
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0]);
         let b = Tensor::from_slice(&[4.0, 5.0, 6.0]);
 
-        let result = executor.dot(&a, &b).await.unwrap();
+        let result = executor.dot(&a, &b).unwrap();
         // 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
         assert_eq!(result, 32.0);
     }
 
-    #[tokio::test]
-    async fn test_tensor_executor_default_backend() {
+    #[test]
+    fn test_tensor_executor_default_backend() {
         let executor = TensorExecutor::builder().build().unwrap();
         assert_eq!(executor.backend(), Backend::Cpu);
     }

@@ -50,7 +50,7 @@ pub enum Backend {
     /// Execute on GPU (requires `gpu` feature).
     #[cfg(feature = "gpu")]
     Gpu,
-    /// Execute in MicroVM (requires `microvm` feature).
+    /// Execute in `MicroVM` (requires `microvm` feature).
     #[cfg(feature = "microvm")]
     MicroVm,
     /// Execute with SIMD acceleration (requires `simd` feature).

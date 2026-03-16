@@ -146,7 +146,16 @@ fn run_event_loop<B: ratatui::backend::Backend>(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    unused_must_use,
+    clippy::panic
+)]
 mod tests {
     use super::*;
     use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
@@ -286,7 +295,7 @@ mod tests {
     #[test]
     fn test_process_tick_elapsed() {
         let mut app = App::new();
-        let last_tick = Instant::now() - Duration::from_millis(200);
+        let last_tick = Instant::now().checked_sub(Duration::from_millis(200)).unwrap();
         let tick_rate = Duration::from_millis(100);
 
         let result = process_tick(&mut app, last_tick, tick_rate);
@@ -322,7 +331,7 @@ mod tests {
     fn test_process_tick_with_nodes() {
         let mut app = App::new();
         app.add_node(NodeStatus::new("node-1", "127.0.0.1:9000".parse().unwrap()));
-        let last_tick = Instant::now() - Duration::from_millis(200);
+        let last_tick = Instant::now().checked_sub(Duration::from_millis(200)).unwrap();
         let tick_rate = Duration::from_millis(100);
 
         let result = process_tick(&mut app, last_tick, tick_rate);

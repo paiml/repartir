@@ -351,7 +351,16 @@ async fn main() -> Result<()> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::assertions_on_constants,
+    clippy::panic
+)]
 mod tests {
     use super::*;
 

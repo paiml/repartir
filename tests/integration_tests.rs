@@ -1,4 +1,13 @@
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::disallowed_methods)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::unreadable_literal,
+    clippy::panic
+)]
 //! Integration tests for repartir
 //!
 //! These tests verify end-to-end workflows combining multiple components.
@@ -135,9 +144,9 @@ mod microvm_integration {
             .build()
             .unwrap();
 
-        let _executor = MicroVmExecutor::new(config).unwrap();
-        // MicroVmExecutor is successfully created
-        assert!(true);
+        let executor = MicroVmExecutor::new(config).unwrap();
+        // MicroVmExecutor is successfully created — verify it has expected config
+        assert_eq!(executor.config().memory_mib, 128);
     }
 
     #[tokio::test]

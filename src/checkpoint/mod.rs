@@ -139,11 +139,11 @@ impl CheckpointManager {
         // Create task directory
         let task_dir = self.checkpoint_dir.join(task_id.to_string());
         std::fs::create_dir_all(&task_dir).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to create task checkpoint directory: {}", e),
+            reason: format!("Failed to create task checkpoint directory: {e}"),
         })?;
 
         // Write to Parquet: checkpoints/<task_id>/<checkpoint_id>.parquet
-        let checkpoint_path = task_dir.join(format!("{}.parquet", checkpoint_id));
+        let checkpoint_path = task_dir.join(format!("{checkpoint_id}.parquet"));
         self.write_parquet(&checkpoint_path, checkpoint_id, state)?;
 
         Ok(checkpoint_id)
@@ -151,6 +151,7 @@ impl CheckpointManager {
 
     /// Write checkpoint to Parquet format
     #[cfg(feature = "checkpoint")]
+    #[allow(clippy::unused_self)]
     fn write_parquet(
         &self,
         path: &PathBuf,
@@ -171,11 +172,15 @@ impl CheckpointManager {
         ]));
 
         // Convert SystemTime to microseconds since UNIX epoch
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_possible_wrap
+        )]
         let timestamp_micros = state
             .timestamp
             .duration_since(SystemTime::UNIX_EPOCH)
             .map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to convert timestamp: {}", e),
+                reason: format!("Failed to convert timestamp: {e}"),
             })?
             .as_micros() as i64;
 
@@ -198,12 +203,12 @@ impl CheckpointManager {
             ],
         )
         .map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to create record batch: {}", e),
+            reason: format!("Failed to create record batch: {e}"),
         })?;
 
         // Write to Parquet file with compression
         let file = File::create(path).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to create parquet file: {}", e),
+            reason: format!("Failed to create parquet file: {e}"),
         })?;
 
         let props = WriterProperties::builder()
@@ -212,18 +217,18 @@ impl CheckpointManager {
 
         let mut writer = ArrowWriter::try_new(file, schema, Some(props)).map_err(|e| {
             RepartirError::InvalidTask {
-                reason: format!("Failed to create parquet writer: {}", e),
+                reason: format!("Failed to create parquet writer: {e}"),
             }
         })?;
 
         writer
             .write(&batch)
             .map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to write parquet batch: {}", e),
+                reason: format!("Failed to write parquet batch: {e}"),
             })?;
 
         writer.close().map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to close parquet writer: {}", e),
+            reason: format!("Failed to close parquet writer: {e}"),
         })?;
 
         Ok(())
@@ -337,18 +342,19 @@ impl CheckpointManager {
 
     /// Read checkpoint from Parquet format
     #[cfg(feature = "checkpoint")]
+    #[allow(clippy::unused_self)]
     fn read_parquet(&self, path: &PathBuf) -> Result<Option<TaskState>> {
         let file = File::open(path).map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to open parquet file: {}", e),
+            reason: format!("Failed to open parquet file: {e}"),
         })?;
 
         let builder =
             ArrowReaderBuilder::try_new(file).map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to create parquet reader: {}", e),
+                reason: format!("Failed to create parquet reader: {e}"),
             })?;
 
         let mut reader = builder.build().map_err(|e| RepartirError::InvalidTask {
-            reason: format!("Failed to build parquet reader: {}", e),
+            reason: format!("Failed to build parquet reader: {e}"),
         })?;
 
         // Read first batch (checkpoints are single-row)
@@ -358,7 +364,7 @@ impl CheckpointManager {
                 reason: "Empty parquet file".to_string(),
             })?
             .map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to read parquet batch: {}", e),
+                reason: format!("Failed to read parquet batch: {e}"),
             })?;
 
         // Extract fields
@@ -397,12 +403,13 @@ impl CheckpointManager {
         // Convert to TaskState
         let task_id =
             Uuid::parse_str(task_id_array.value(0)).map_err(|e| RepartirError::InvalidTask {
-                reason: format!("Failed to parse task_id: {}", e),
+                reason: format!("Failed to parse task_id: {e}"),
             })?;
 
         let iteration = iteration_array.value(0);
 
         let timestamp_micros = timestamp_array.value(0);
+        #[allow(clippy::cast_sign_loss)]
         let timestamp =
             SystemTime::UNIX_EPOCH + std::time::Duration::from_micros(timestamp_micros as u64);
 
@@ -461,6 +468,7 @@ impl CheckpointManager {
                 Some("parquet") => {
                     // Read Parquet metadata
                     if let Some(state) = self.read_parquet(&path)? {
+                        #[allow(clippy::cast_possible_truncation)]
                         let size_bytes = std::fs::metadata(&path)
                             .map(|m| m.len() as usize)
                             .unwrap_or(0);

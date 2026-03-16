@@ -1,7 +1,7 @@
 //! Serverless Function Execution
 //!
 //! Lambda-compatible serverless functions with sub-100ms cold start.
-//! Built on pepita MicroVM for hardware-level isolation.
+//! Built on pepita `MicroVM` for hardware-level isolation.
 //!
 //! ## Example
 //!
@@ -68,7 +68,7 @@ impl Default for Runtime {
 // ============================================================================
 
 /// Event trigger for function invocation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Trigger {
     /// HTTP/REST trigger
     Http {
@@ -95,13 +95,8 @@ pub enum Trigger {
         events: Vec<FsEvent>,
     },
     /// Manual invocation only
+    #[default]
     Manual,
-}
-
-impl Default for Trigger {
-    fn default() -> Self {
-        Self::Manual
-    }
 }
 
 /// HTTP methods
@@ -225,7 +220,7 @@ impl FunctionBuilder {
 
     /// Set execution timeout
     #[must_use]
-    pub fn timeout(mut self, timeout: Duration) -> Self {
+    pub const fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
@@ -309,7 +304,7 @@ impl InvocationRequest {
 
     /// Set as async invocation
     #[must_use]
-    pub fn async_invoke(mut self) -> Self {
+    pub const fn async_invoke(mut self) -> Self {
         self.invocation_type = InvocationType::Event;
         self
     }
@@ -349,7 +344,8 @@ pub struct InvocationResponse {
 impl InvocationResponse {
     /// Create success response
     #[must_use]
-    pub fn success(request_id: Uuid, payload: Vec<u8>, duration: Duration) -> Self {
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn success(request_id: Uuid, payload: Vec<u8>, duration: Duration) -> Self {
         Self {
             request_id,
             status_code: 0,
@@ -363,6 +359,7 @@ impl InvocationResponse {
 
     /// Create error response
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn error(request_id: Uuid, error: impl Into<String>, duration: Duration) -> Self {
         Self {
             request_id,
@@ -502,6 +499,7 @@ impl FunctionService {
     /// # Errors
     ///
     /// Returns error if function not found or execution fails
+    #[allow(clippy::needless_pass_by_value)]
     pub fn invoke(&mut self, request: InvocationRequest) -> Result<InvocationResponse> {
         let start = std::time::Instant::now();
 
@@ -584,6 +582,7 @@ pub struct ColdStartMetrics {
 impl ColdStartMetrics {
     /// Calculate warm start ratio
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn warm_start_ratio(&self) -> f64 {
         let total = self.cold_starts + self.warm_starts;
         if total == 0 {
@@ -598,6 +597,18 @@ impl ColdStartMetrics {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::unchecked_time_subtraction,
+    clippy::manual_range_contains,
+    clippy::panic,
+    clippy::redundant_clone
+)]
 mod tests {
     use super::*;
 

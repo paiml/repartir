@@ -173,7 +173,15 @@ pub fn truncate(s: &str, max_len: usize) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::panic
+)]
 mod tests {
     use super::*;
 
@@ -341,7 +349,7 @@ mod tests {
         #[test]
         fn prop_safe_pct_bounded(used in -1000.0f64..1000.0, total in 0.1f64..1000.0) {
             let pct = safe_pct(used, total);
-            prop_assert!(pct >= 0.0 && pct <= 100.0);
+            prop_assert!((0.0..=100.0).contains(&pct));
         }
 
         #[test]

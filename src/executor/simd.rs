@@ -85,7 +85,7 @@ pub struct SimdTask {
     input_a_f64: Vec<f64>,
     /// Second input (f64).
     input_b_f64: Vec<f64>,
-    /// Matrix dimensions (rows_a, cols_a, cols_b) for matmul.
+    /// Matrix dimensions (`rows_a`, `cols_a`, `cols_b`) for matmul.
     matrix_dims: Option<(usize, usize, usize)>,
 }
 
@@ -148,7 +148,7 @@ impl SimdTask {
 
     /// Create a matrix multiplication task (f32).
     ///
-    /// Matrix A is rows_a x cols_a, Matrix B is cols_a x cols_b.
+    /// Matrix A is `rows_a` x `cols_a`, Matrix B is `cols_a` x `cols_b`.
     #[must_use]
     pub fn matmul_f32(
         a: Vec<f32>,
@@ -344,6 +344,7 @@ impl SimdMetrics {
 
     /// Get average throughput.
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn avg_throughput(&self) -> f64 {
         let elements = self.elements_processed.load(Ordering::Relaxed) as f64;
         let time_ns = self.total_time_ns.load(Ordering::Relaxed) as f64;
@@ -401,17 +402,27 @@ impl SimdExecutor {
 
     /// Get best vector width in bits.
     #[must_use]
-    pub fn vector_width(&self) -> u32 {
+    pub const fn vector_width(&self) -> u32 {
         self.caps.best_vector_width()
     }
 
     /// Check if SIMD is available.
     #[must_use]
-    pub fn has_simd(&self) -> bool {
+    pub const fn has_simd(&self) -> bool {
         self.caps.has_simd()
     }
 
     /// Execute a SIMD task.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if task validation fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `matrix_dims` is `None` for a `MatMulF32` operation (should
+    /// not happen after validation).
+    #[allow(clippy::unused_async)]
     pub async fn execute_simd(&self, task: SimdTask) -> Result<SimdResult> {
         task.validate()?;
 
@@ -449,7 +460,10 @@ impl SimdExecutor {
                 (Vec::new(), Vec::new(), Some(result), len)
             }
             SimdOperation::MatMulF32 => {
-                let (rows_a, cols_a, cols_b) = task.matrix_dims.unwrap();
+                let (rows_a, cols_a, cols_b) =
+                    task.matrix_dims.ok_or_else(|| RepartirError::InvalidTask {
+                        reason: "matrix_dims required for MatMulF32".to_string(),
+                    })?;
                 let mut output = vec![0.0f32; rows_a * cols_b];
                 self.matrix_ops.matmul_f32(
                     &task.input_a_f32,
@@ -465,6 +479,7 @@ impl SimdExecutor {
         };
 
         let duration = start.elapsed();
+        #[allow(clippy::cast_precision_loss)]
         let throughput = if duration.as_nanos() > 0 {
             elements as f64 / duration.as_secs_f64()
         } else {
@@ -473,9 +488,11 @@ impl SimdExecutor {
 
         // Update metrics
         self.metrics.operations.fetch_add(1, Ordering::Relaxed);
+        #[allow(clippy::cast_possible_truncation)]
         self.metrics
             .elements_processed
             .fetch_add(elements as u64, Ordering::Relaxed);
+        #[allow(clippy::cast_possible_truncation)]
         self.metrics
             .total_time_ns
             .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
@@ -526,6 +543,7 @@ impl Executor for SimdExecutor {
     }
 }
 
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for SimdExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SimdExecutor")
@@ -541,7 +559,16 @@ impl std::fmt::Debug for SimdExecutor {
 // ============================================================================
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::float_cmp,
+    clippy::cast_precision_loss,
+    clippy::uninlined_format_args,
+    clippy::unreadable_literal,
+    clippy::panic
+)]
 mod tests {
     use super::*;
 
@@ -603,7 +630,7 @@ mod tests {
     fn test_simd_task_vmul_f32() {
         let a = vec![1.0, 2.0, 3.0];
         let b = vec![4.0, 5.0, 6.0];
-        let task = SimdTask::vmul_f32(a.clone(), b.clone());
+        let task = SimdTask::vmul_f32(a, b);
 
         assert_eq!(task.operation(), SimdOperation::VmulF32);
         assert!(task.validate().is_ok());
