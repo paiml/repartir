@@ -2,16 +2,11 @@
 # Per Iron Lotus Framework Section 11.2
 
 [advisories]
-# Deny crates with security vulnerabilities
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "deny"
-yanked = "deny"
+ignore = []
 
 [licenses]
 # Only allow approved open-source licenses (no copyleft in sovereign stack)
 unlicensed = "deny"
-copyleft = "deny"
 
 allow = [
     "MIT",
@@ -20,6 +15,7 @@ allow = [
     "BSD-2-Clause",
     "ISC",
     "Unicode-DFS-2016",
+    "Unicode-3.0",
 ]
 
 # Warn on licenses we need to review

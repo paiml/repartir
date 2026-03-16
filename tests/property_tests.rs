@@ -1,6 +1,7 @@
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
+    clippy::disallowed_methods,
     clippy::uninlined_format_args,
     clippy::collection_is_never_read
 )]

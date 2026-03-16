@@ -585,6 +585,12 @@ impl CheckpointManager {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::cast_possible_truncation
+)]
 mod tests {
     use super::*;
     use std::time::Duration;

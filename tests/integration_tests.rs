@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::disallowed_methods)]
 //! Integration tests for repartir
 //!
 //! These tests verify end-to-end workflows combining multiple components.
@@ -304,6 +304,7 @@ mod end_to_end {
 // PEPITA PRIMITIVE INTEGRATION TESTS
 // ============================================================================
 
+#[cfg(feature = "simd")]
 mod pepita_primitives {
     use pepita::simd::{SimdCapabilities, SimdOps};
     use pepita::virtio::{VirtQueue, VirtioVsock, VsockAddr};

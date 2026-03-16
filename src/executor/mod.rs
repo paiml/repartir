@@ -64,7 +64,13 @@ pub trait Executor: Send + Sync {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::disallowed_methods,
+    clippy::no_effect_underscore_binding,
+    clippy::doc_markdown
+)]
 mod tests {
     use super::*;
     use crate::executor::cpu::CpuExecutor;

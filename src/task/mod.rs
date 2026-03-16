@@ -631,7 +631,7 @@ impl ExecutionResult {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::disallowed_methods)]
 mod tests {
     use super::*;
 

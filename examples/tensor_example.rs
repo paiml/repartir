@@ -1,7 +1,7 @@
 //! Tensor operations with SIMD acceleration (v2.0 Phase 3)
 //!
 //! This example demonstrates:
-//! - Creating a TensorExecutor
+//! - Creating a `TensorExecutor`
 //! - SIMD-accelerated tensor operations (add, mul, dot, etc.)
 //! - Performance benefits of vectorized computation
 

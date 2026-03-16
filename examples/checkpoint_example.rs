@@ -51,7 +51,7 @@ async fn main() -> repartir::error::Result<()> {
         timestamp: SystemTime::now(),
     };
     let checkpoint1_id = manager.checkpoint(task_id, &state1).await?;
-    println!("   ✓ Checkpoint 1 created: {}", checkpoint1_id);
+    println!("   ✓ Checkpoint 1 created: {checkpoint1_id}");
 
     tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -63,7 +63,7 @@ async fn main() -> repartir::error::Result<()> {
         timestamp: SystemTime::now(),
     };
     let checkpoint2_id = manager.checkpoint(task_id, &state2).await?;
-    println!("   ✓ Checkpoint 2 created: {}\n", checkpoint2_id);
+    println!("   ✓ Checkpoint 2 created: {checkpoint2_id}\n");
 
     // List all checkpoints
     println!("3. Listing all checkpoints...");
@@ -107,7 +107,7 @@ async fn main() -> repartir::error::Result<()> {
 
     println!("   ✓ Task created with data dependencies:");
     for dep in task_with_locality.data_dependencies() {
-        println!("     - {}", dep);
+        println!("     - {dep}");
     }
     println!();
 
@@ -134,7 +134,7 @@ async fn main() -> repartir::error::Result<()> {
     println!("7. Checkpoint cleanup (retention policy)...");
     println!("   Keeping checkpoints newer than 30 days...");
     let deleted = manager.cleanup(30).await?;
-    println!("   ✓ Deleted {} old checkpoints\n", deleted);
+    println!("   ✓ Deleted {deleted} old checkpoints\n");
 
     println!("=== Example Complete ===");
     println!("\nKey Takeaways:");

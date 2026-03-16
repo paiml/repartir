@@ -1,6 +1,7 @@
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
+    clippy::disallowed_methods,
     clippy::explicit_iter_loop,
     clippy::cast_sign_loss,
     clippy::semicolon_if_nothing_returned
