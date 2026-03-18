@@ -158,6 +158,28 @@ async fn main() -> Result<()> {
 
     // Parse command line arguments
     let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--version" | "-V" => {
+                println!("repartir-worker {}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
+            "--help" | "-h" => {
+                println!("Repartir Remote Worker — distributed task execution daemon");
+                println!();
+                println!("Usage: repartir-worker [BIND_ADDR]");
+                println!();
+                println!("Arguments:");
+                println!("  [BIND_ADDR]  Address to listen on [default: 0.0.0.0:9000]");
+                println!();
+                println!("Options:");
+                println!("  -h, --help     Print help");
+                println!("  -V, --version  Print version");
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
     let bind_addr = if args.len() > 1 { &args[1] } else { "0.0.0.0:9000" };
 
     info!("Repartir Remote Worker v1.1");

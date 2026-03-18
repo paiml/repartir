@@ -1,0 +1,41 @@
+{
+  "direct_count": 6,
+  "transitive_count": 41,
+  "timestamp": "2026-03-18T21:00:57.786631463+00:00",
+  "previous": {
+    "direct_count": 6,
+    "transitive_count": 41,
+    "timestamp": "2026-02-21T20:41:15.819377417+00:00",
+    "previous": {
+      "direct_count": 6,
+      "transitive_count": 41,
+      "timestamp": "2026-02-21T20:38:58.044260211+00:00",
+      "previous": {
+        "direct_count": 6,
+        "transitive_count": 41,
+        "timestamp": "2026-02-18T21:08:30.454618003+00:00",
+        "previous": {
+          "direct_count": 6,
+          "transitive_count": 41,
+          "timestamp": "2026-02-18T20:44:55.591851932+00:00",
+          "previous": {
+            "direct_count": 6,
+            "transitive_count": 41,
+            "timestamp": "2026-02-18T20:43:17.464130936+00:00",
+            "previous": {
+              "direct_count": 6,
+              "transitive_count": 462,
+              "timestamp": "2026-02-09T16:15:15.968394492+00:00",
+              "previous": {
+                "direct_count": 6,
+                "transitive_count": 462,
+                "timestamp": "2026-02-05T16:19:39.171358280+00:00",
+                "previous": null
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
