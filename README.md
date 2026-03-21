@@ -1,7 +1,7 @@
 <div align="center">
 [![CI](https://github.com/paiml/repartir/actions/workflows/ci.yml/badge.svg)](https://github.com/paiml/repartir/actions/workflows/ci.yml)
 
-# Repartir: Sovereign AI-Grade Distributed Computing
+<h1 align="center">Repartir: Sovereign AI-Grade Distributed Computing</h1>
 
 [![CI](https://img.shields.io/badge/CI-Jidoka%20Gates-green)](.github/workflows/jidoka-gates.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
