@@ -739,7 +739,7 @@ See [specification](docs/specifications/repartir-distributed-cpu-gpu-data-hpc-sp
 
 ## See Also
 
-- [Cookbook](https://github.com/paiml/sovereign-ai-cookbook)
+- [Cookbook](examples/) — 9 runnable examples
 
 ## License
 
