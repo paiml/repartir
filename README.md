@@ -737,6 +737,10 @@ See [specification](docs/specifications/repartir-distributed-cpu-gpu-data-hpc-sp
 
 *Note: rustls (used for TLS) currently depends on aws-lc-rs (C). Pure Rust alternatives under evaluation for v1.2+.
 
+## See Also
+
+- [Cookbook](https://github.com/paiml/sovereign-ai-cookbook)
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
