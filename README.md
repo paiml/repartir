@@ -1,4 +1,5 @@
 <div align="center">
+[![CI](https://github.com/paiml/repartir/actions/workflows/ci.yml/badge.svg)](https://github.com/paiml/repartir/actions/workflows/ci.yml)
 
 # Repartir: Sovereign AI-Grade Distributed Computing
 
