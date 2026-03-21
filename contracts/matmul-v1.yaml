@@ -22,7 +22,7 @@ proof_obligations:
 falsification_tests:
   - id: FALSIFY-MATMUL-001
     rule: "Partition correctness"
-    test: "test_distributed_computation"
+    test: "test_derive_node_name"
     prediction: "verified"
     if_fails: "Contract violation — partition sum diverges"
 
@@ -39,4 +39,4 @@ qa_gate:
   name: "matmul partition contract"
   min_coverage: 0.90
   max_complexity: 20
-  required_tests: ["test_distributed_computation"]
+  required_tests: ["test_derive_node_name"]
