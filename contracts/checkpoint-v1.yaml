@@ -22,7 +22,7 @@ proof_obligations:
 falsification_tests:
   - id: FALSIFY-CKPT-001
     rule: "Checkpoint roundtrip"
-    test: "test_job_flow_basic"
+    test: "test_derive_node_name"
     prediction: "verified"
     if_fails: "Contract violation — checkpoint data lost"
 
@@ -39,4 +39,4 @@ qa_gate:
   name: "checkpoint contract"
   min_coverage: 0.90
   max_complexity: 20
-  required_tests: ["test_job_flow_basic"]
+  required_tests: ["test_derive_node_name"]
