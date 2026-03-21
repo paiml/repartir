@@ -12,6 +12,7 @@ rust-version = "1.75"
 [workspace.dependencies]
 
 [package]
+exclude = ["tests/", "benches/", "docs/", ".github/", "book/", ".pmat/"]
 name = "repartir"
 version = "2.0.3"
 edition = "2021"
