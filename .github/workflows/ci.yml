@@ -1,0 +1,22 @@
+# Sovereign CI — calls reusable workflow from paiml/.github
+# Change once in paiml/.github → applies to all repos
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: paiml/.github/.github/workflows/sovereign-ci.yml@main
+    with:
+      repo: ${{ github.event.repository.name }}
+    secrets: inherit
+
