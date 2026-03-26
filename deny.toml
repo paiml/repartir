@@ -1,46 +1,53 @@
-# Sovereign AI Supply Chain Security Configuration
-# Per Iron Lotus Framework Section 11.2
+# cargo-deny configuration
+# Deployed from paiml/infra — do not edit manually.
+# Spec: docs/specifications/unified-ci-pipeline.md
+
+[graph]
+targets = []
+all-features = false
+no-default-features = false
 
 [advisories]
 ignore = [
-    # Transitive deps from ratatui/jugar-probar — no direct upgrade path
-    "RUSTSEC-2024-0384",  # instant (unmaintained) — via notify-types
-    "RUSTSEC-2026-0002",  # lru (unsound IterMut) — via ratatui, upgrade blocked
-    "RUSTSEC-2024-0436",  # paste (unmaintained) — via ratatui/rav1e
+    # Unmaintained transitive deps with no available fix.
+    # Reviewed 2026-03-26 — all are deep transitive, no direct usage.
+    { id = "RUSTSEC-2024-0384", reason = "instant: transitive via web-time, no replacement available" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: transitive via simba/nalgebra/parquet, use pastey when upstream migrates" },
+    { id = "RUSTSEC-2025-0119", reason = "number_prefix: transitive via indicatif, no replacement available" },
+    { id = "RUSTSEC-2025-0141", reason = "bincode: transitive, widely used, no drop-in replacement" },
 ]
 
 [licenses]
-# Only allow approved open-source licenses (no copyleft in sovereign stack)
-# Note: unlicensed crates are denied by default in cargo-deny >=0.15
 allow = [
     "MIT",
     "Apache-2.0",
-    "BSD-3-Clause",
+    "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
+    "BSD-3-Clause",
     "ISC",
-    "Unicode-DFS-2016",
     "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "BSL-1.0",
+    "OpenSSL",
+    "0BSD",
+    "CC0-1.0",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+    "MIT-0",
 ]
-
-# Warn on licenses we need to review
 confidence-threshold = 0.8
 
 [bans]
-# Multiple versions of same crate increase attack surface
 multiple-versions = "warn"
 wildcards = "deny"
-
-# Deny known problematic crates
-deny = [
-    # No C/C++ FFI (Sovereign AI principle)
-    # { name = "cc", reason = "Compiles C/C++ code, violates zero-C requirement" },
-]
+highlight = "all"
 
 [sources]
-# Only allow crates from crates.io (no git dependencies with ambiguous provenance)
 unknown-registry = "deny"
 unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
 
-# Allow crates.io
 [sources.allow-org]
-github = []
+github = ["paiml"]
