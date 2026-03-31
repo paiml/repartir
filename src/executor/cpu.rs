@@ -406,11 +406,20 @@ mod tests {
 
         #[cfg(unix)]
         {
-            // Command that produces no output
-            let task = Task::builder().binary("/bin/true").backend(Backend::Cpu).build().unwrap();
+            // Command that produces no output.
+            // Use `/bin/sh -c true` instead of `/bin/true` for portability:
+            // `/bin/true` may not exist on all platforms (e.g., macOS CI runners
+            // where only `/usr/bin/true` is available).
+            let task = Task::builder()
+                .binary("/bin/sh")
+                .arg("-c")
+                .arg("true")
+                .backend(Backend::Cpu)
+                .build()
+                .unwrap();
 
             let result = executor.execute(task).await;
-            assert!(result.is_ok());
+            assert!(result.is_ok(), "execute failed: {:?}", result.unwrap_err());
             let exec_result = result.unwrap();
             assert!(exec_result.is_success());
             assert_eq!(exec_result.stdout().len(), 0);
