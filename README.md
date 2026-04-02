@@ -59,7 +59,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-repartir = "2.0"
+repartir = "2.0.3"
 tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
 ```
 
@@ -262,25 +262,25 @@ Repartir supports multiple execution backends via feature flags:
 ```toml
 [dependencies]
 # CPU only (default)
-repartir = "2.0"
+repartir = "2.0.3"
 
 # With GPU support (v1.1+)
-repartir = { version = "2.0", features = ["gpu"] }
+repartir = { version = "2.0.3", features = ["gpu"] }
 
 # With remote execution (v1.1+)
-repartir = { version = "2.0", features = ["remote"] }
+repartir = { version = "2.0.3", features = ["remote"] }
 
 # With TLS encryption (v1.1+)
-repartir = { version = "2.0", features = ["remote-tls"] }
+repartir = { version = "2.0.3", features = ["remote-tls"] }
 
 # With Parquet checkpointing (v2.0+)
-repartir = { version = "2.0", features = ["checkpoint"] }
+repartir = { version = "2.0.3", features = ["checkpoint"] }
 
 # With SIMD tensor operations (v2.0+)
-repartir = { version = "2.0", features = ["tensor"] }
+repartir = { version = "2.0.3", features = ["tensor"] }
 
 # All features
-repartir = { version = "2.0", features = ["full"] }
+repartir = { version = "2.0.3", features = ["full"] }
 ```
 
 ### GPU Executor (v1.1+)
@@ -589,7 +589,7 @@ Fast feedback for flow state:
 ```bash
 make tier1
 ```
-- Unit tests (21 tests)
+- Unit tests (84 tests)
 - `cargo check`
 - `cargo clippy`
 - `cargo fmt`
@@ -601,7 +601,7 @@ Comprehensive pre-commit gate:
 ```bash
 make tier2
 ```
-- All tests (21 unit + 4 property + 4 doc = 29 tests)
+- All tests (84 tests)
 - Property-based tests (proptest)
 - Coverage analysis (target ≥95%)
 - Documentation tests
@@ -621,20 +621,14 @@ make tier3
 
 **Target**: 1-6 hours (run overnight or in CI)
 
-## Test Results (v2.0)
+## Test Results (v2.0.3)
 
 ```
-✓ 190 unit tests         (0.12s)  - lib tests
-✓ 32 integration tests   (0.10s)  - pepita integration
-✓ 4 property-based tests (1.53s)  - proptest
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  226 tests PASSED
-
-pepita (dependency):
-✓ 417 unit tests         (0.71s)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  643 total tests across pepita + repartir
+✓ 84 tests PASSED (0 warnings)
 ```
+
+### Recent Fixes (v2.0.3)
+- macOS test compatibility: `/bin/true` replaced with `/bin/sh -c true` for cross-platform test execution
 
 ## Sovereign AI Principles
 
@@ -663,7 +657,7 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ CPU executor with work-stealing scheduler
 - ✅ Priority-based task scheduling
 - ✅ High-level Pool API
-- ✅ Comprehensive testing (29 tests)
+- ✅ Comprehensive testing (84 tests)
 - ✅ Iron Lotus quality gates
 - ✅ Supply chain security
 
@@ -677,7 +671,7 @@ Per NSA/CISA joint guidance on memory-safe languages:
 - ✅ bashrs purification (POSIX-compliant shell code)
 - ✅ Advanced messaging patterns (PUB/SUB, PUSH/PULL)
 
-### v2.0: Data Integration (In Progress)
+### v2.0: Data Integration (Complete)
 - ✅ **Parquet Checkpoint Storage** (Phase 1): SNAPPY compression, 5-10x size reduction
 - ✅ **Data-Locality Tracking** (Phase 1): DataLocationTracker with batch affinity queries
 - ✅ **Affinity-Based Scheduling** (Phase 2): Automatic locality-aware task assignment
@@ -724,7 +718,7 @@ See [specification](docs/specifications/repartir-distributed-cpu-gpu-data-hpc-sp
 
 ## Comparison with Existing Systems
 
-| Feature                | Repartir (v1.1) | Ray       | Dask      |
+| Feature                | Repartir (v2.0) | Ray       | Dask      |
 |------------------------|-----------------|-----------|-----------|
 | Language               | Rust            | Python    | Python    |
 | C Dependencies         | Zero*           | Many      | Some      |

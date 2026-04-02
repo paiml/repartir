@@ -133,7 +133,10 @@ impl Task {
     /// Creates a new task builder.
     #[must_use]
     pub fn builder() -> TaskBuilder {
-        TaskBuilder::default()
+        contract_pre_configuration!();
+        let result = TaskBuilder::default();
+        contract_post_configuration!(&"ok");
+        result
     }
 
     /// Returns the task ID.
@@ -465,6 +468,7 @@ impl TaskBuilder {
     ///
     /// Returns an error if the binary path is not set.
     pub fn build(self) -> Result<Task> {
+        contract_pre_configuration!();
         // For GPU tasks with shader code, binary is optional
         #[cfg(feature = "gpu")]
         let binary_required = self.shader_code.is_none();

@@ -74,6 +74,10 @@
 #![warn(clippy::nursery)]
 #![deny(unsafe_code)] // v1.0: No unsafe code (Sovereign AI requirement)
 
+#[macro_use]
+#[allow(unused_macros)]
+mod generated_contracts;
+
 pub mod checkpoint;
 pub mod error;
 pub mod executor;
