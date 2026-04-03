@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Contract-First Design
+
+This project follows contract-first development with provable-contracts.
+Contracts live in `../provable-contracts/contracts/repartir/`.
+Run `pmat comply check` to validate contract compliance.
+
 ## Project Overview
 
 **repartir** provides Sovereign AI-grade distributed computing primitives for Rust. It enables CPU, GPU, and remote execution with work-stealing schedulers, checkpointing, and TUI visualization.
